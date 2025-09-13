@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScoreBuy - Tienda de Partituras</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- PDF.js para mostrar vistas previas de PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<!-- JSZip para procesar archivos MXL -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  /* Estilos optimizados y mejorados */
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background: #faf7ff; 
+    margin:0; 
+    min-height: 100vh;
+  }
+  .card { 
+    transition: all 0.3s ease; 
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  }
+  .card:hover { 
+    transform: translateY(-5px); 
+    box-shadow: 0 10px 20px rgba(124, 58, 237, 0.15);
+    cursor:pointer; 
+  }
+  .header { 
+    position: fixed; 
+    top:0; 
+    left:0; 
+    right:0; 
+    z-index:10;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  main { 
+    padding-top: 120px;
+    padding-bottom: 40px;
+  } 
+  #cartBtn {
+    position: fixed; 
+    bottom: 20px; 
+    right: 20px;
+    width: 60px; 
+    height: 60px; 
+    border-radius: 50%;
+    background: #7c3aed; 
+    color: white; 
+    display:flex;
+    justify-content:center; 
+    align-items:center; 
+    font-size:1.5rem;
+    box-shadow:0 4px 10px rgba(0,0,0,0.3); 
+    cursor:pointer; 
+    z-index:50;
+    transition: all 0.3s ease;
+  }
+  #cartBtn:hover { 
+    transform: scale(1.1); 
+    background: #6d28d9;
+  }
+  #cartContainer {
+    position: fixed; 
+    bottom: 90px; 
+    right: 20px;
+    background:white; 
+    border-radius:12px; 
+    box-shadow:0 10px 25px rgba(0,0,0,0.2); 
+    width: 320px; 
+    max-height: 400px; 
+    overflow-y:auto; 
+    padding:20px; 
+    display:none; 
+    z-index:50;
+  }
+  .hidden { 
+    display:none; 
+  }
+  .no-orders-msg {
+    display: flex; 
+    justify-content:center; 
+    align-items:center;
+    font-size:1.2rem; 
+    font-weight:bold; 
+    color:white;
+    background: rgba(107, 33, 168, 0.8);
+    border-radius: 12px; 
+    padding: 40px; 
+    text-align:center; 
+    height:100%;
+  }
+  /* Modal de Perfil */
+  #profileModal {
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100%; 
+    height:100%;
+    background: rgba(0,0,0,0.5); 
+    justify-content:center; 
+    align-items:center; 
+    z-index:60;
+  }
+  #profileContent {
+    background:white; 
+    border-radius:16px; 
+    padding:25px; 
+    width:90%; 
+    max-width:400px; 
+    position:relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  #profileContent button.closeProfile {
+    position:absolute; 
+    top:15px; 
+    right:15px; 
+    font-size:1.5rem; 
+    font-weight:bold; 
+    color:#ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  /* Modal de Partitura */
+  #scoreModal {
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100%; 
+    height:100%;
+    background: rgba(0,0,0,0.5); 
+    justify-content:center; 
+    align-items:center; 
+    z-index:70;
+  }
+  #scoreContentModal {
+    background:white; 
+    border-radius:16px; 
+    padding:25px; 
+    width:95%; 
+    max-width:800px; 
+    max-height:90%; 
+    overflow-y:auto; 
+    position:relative;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  }
+  #scoreContentModal button.closeScore {
+    position:absolute; 
+    top:15px; 
+    right:15px; 
+    font-size:1.8rem; 
+    font-weight:bold; 
+    color:#ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  /* Modal de Administración */
+  #adminModal {
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100%; 
+    height:100%;
+    background: rgba(0,0,0,0.5); 
+    justify-content:center; 
+    align-items:center; 
+    z-index:80;
+  }
+  #adminModalContent {
+    background:white; 
+    border-radius:16px; 
+    padding:25px; 
+    width:95%; 
+    max-width:1000px; 
+    max-height:90%; 
+    overflow-y:auto; 
+    position:relative;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  }
+  #adminModalContent button.closeAdminModal {
+    position:absolute; 
+    top:15px; 
+    right:15px; 
+    font-size:1.8rem; 
+    font-weight:bold; 
+    color:#ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  /* Modal para añadir partituras */
+  #addScoreModal {
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100%; 
+    height:100%;
+    background: rgba(0,0,0,0.5); 
+    justify-content:center; 
+    align-items:center; 
+    z-index:90;
+  }
+  #addScoreModalContent {
+    background:white; 
+    border-radius:16px; 
+    padding:25px; 
+    width:95%; 
+    max-width:600px; 
+    max-height:90%; 
+    overflow-y:auto; 
+    position:relative;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  }
+  #addScoreModalContent button.closeAddScoreModal {
+    position:absolute; 
+    top:15px; 
+    right:15px; 
+    font-size:1.8rem; 
+    font-weight:bold; 
+    color:#ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  /* Modal de vista ampliada de PDF */
+  #pdfViewerModal {
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100%; 
+    height:100%;
+    background: rgba(0,0,0,0.9); 
+    justify-content:center; 
+    align-items:center; 
+    z-index:100;
+  }
+  #pdfViewerContent {
+    background:white; 
+    border-radius:8px; 
+    padding:20px; 
+    width:95%; 
+    max-width:900px; 
+    max-height:90%; 
+    overflow:auto; 
+    position:relative;
+  }
+  #pdfViewerContent button.closePdfViewer {
+    position:absolute; 
+    top:10px; 
+    right:10px; 
+    font-size:1.8rem; 
+    font-weight:bold; 
+    color:#ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index:101;
+  }
+  /* Estilos para la barra de búsqueda */
+  .search-container {
+    position: relative;
+    display: inline-block;
+  }
+  .search-container i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7c3aed;
+  }
+  .search-container input {
+    padding-left: 40px;
+    border-radius: 50px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s;
+  }
+  .search-container input:focus {
+    border-color: #7c3aed;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  }
+  /* Botones mejorados */
+  .btn-primary {
+    background: #7c3aed;
+    color: white;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .btn-primary:hover {
+    background: #6d28d9;
+    transform: translateY(-2px);
+  }
+  .btn-secondary {
+    background: white;
+    color: #7c3aed;
+    border: 2px solid #7c3aed;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .btn-secondary:hover {
+    background: #f5f3ff;
+  }
+  /* Mejora para los comentarios */
+  .comment {
+    border-left: 4px solid #7c3aed;
+    padding-left: 12px;
+    margin-bottom: 12px;
+    background: #faf7ff;
+    border-radius: 0 8px 8px 0;
+  }
+  /* Animación de carga */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in {
+    animation: fadeIn 0.5s ease forwards;
+  }
+  /* Scroll personalizado */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #c4b5fd;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #7c3aed;
+  }
+  /* Mejoras para el modal de partituras */
+  .score-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) {
+    .score-details-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .download-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 8px;
+  }
+  .download-badge.completed {
+    background-color: #10b981;
+    color: white;
+  }
+  .download-badge.pending {
+    background-color: #f59e0b;
+    color: white;
+  }
+  .score-info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .score-info-item i {
+    width: 20px;
+    margin-right: 10px;
+    color: #7c3aed;
+  }
+  /* Vista previa de PDF */
+  .pdf-preview-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+  .pdf-page {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background: white;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .pdf-page:hover {
+    transform: scale(1.05);
+  }
+  .pdf-page canvas {
+    max-width: 200px;
+    height: auto;
+  }
+  .pdf-page-number {
+    text-align: center;
+    padding: 5px;
+    font-size: 12px;
+    color: #666;
+    background: #f5f5f5;
+  }
+  /* Tabla de administración */
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+  }
+  .admin-table th, .admin-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  .admin-table th {
+    background-color: #f8f5ff;
+    font-weight: 600;
+    color: #7c3aed;
+  }
+  .admin-table tr:hover {
+    background-color: #f9f7ff;
+  }
+  /* Formularios */
+  .form-group {
+    margin-bottom: 15px;
+  }
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #4b5563;
+  }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 16px;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  }
+  /* Botón de cambio de vista */
+  #viewToggleBtn {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #7c3aed;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    cursor: pointer;
+    z-index: 40;
+    transition: all 0.3s ease;
+  }
+  #viewToggleBtn:hover {
+    transform: scale(1.1);
+    background: #6d28d9;
+  }
+  /* Vista de lista */
+  .list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .list-view .card {
+    display: flex;
+    flex-direction: row;
+    height: auto;
+  }
+  .list-view .card img {
+    width: 200px;
+    height: 150px;
+    object-fit: contain;
+    margin-right: 20px;
+  }
+  .list-view .card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  /* Indicador de carga */
+  .loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #7c3aed;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  /* Barra de progreso */
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 5px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background-color: #7c3aed;
+    transition: width 0.3s ease;
+  }
+  /* Notificaciones */
+  .notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+  .notification.show {
+    transform: translateX(0);
+  }
+  .notification.success {
+    background-color: #10b981;
+  }
+  .notification.error {
+    background-color: #ef4444;
+  }
+  .notification.info {
+    background-color: #3b82f6;
+  }
+  .notification.warning {
+    background-color: #f59e0b;
+  }
+</style>
+</head>
+<body>
+
+<header class="header bg-gradient-to-r from-purple-700 via-purple-500 to-purple-400 text-white p-4 flex flex-wrap justify-between items-center">
+  <h1 class="text-xl font-bold flex items-center">
+    <i class="fas fa-music mr-2"></i>MyScoreBuy
+  </h1>
+  <div class="flex items-center mt-2 md:mt-0 flex-wrap gap-2">
+    <div class="search-container">
+      <i class="fas fa-search"></i>
+      <input type="text" id="search" placeholder="Buscar partituras..." class="p-2 rounded text-black w-full md:w-64">
+    </div>
+    <button id="loginBtn" class="btn-secondary ml-2"><i class="fas fa-sign-in-alt mr-1"></i>Iniciar Sesión</button>
+    <button id="signupBtn" class="btn-secondary ml-2"><i class="fas fa-user-plus mr-1"></i>Registrarse</button>
+    <button id="ordersBtn" class="btn-secondary ml-2 hidden"><i class="fas fa-history mr-1"></i>Pedidos</button>
+    <button id="adminBtn" class="btn-secondary ml-2 hidden"><i class="fas fa-cog mr-1"></i>Admin</button>
+    <button id="catalogBtn" class="btn-secondary ml-2 hidden"><i class="fas fa-th-list mr-1"></i>Catálogo</button>
+    <button id="profileBtn" class="btn-secondary ml-2 hidden"><i class="fas fa-user-circle mr-1"></i>Perfil</button>
+    <button id="addScoreBtn" class="btn-secondary ml-2 hidden"><i class="fas fa-plus-circle mr-1"></i>Añadir Partitura</button>
+  </div>
+</header>
+
+<!-- Botón de cambio de vista -->
+<button id="viewToggleBtn" title="Cambiar vista">
+  <i class="fas fa-th-large"></i>
+</button>
+
+<!-- Catálogo -->
+<main id="catalog" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4"></main>
+
+<!-- Pedidos -->
+<main id="ordersSection" class="hidden p-4">
+  <h2 class="text-2xl font-bold mb-6 text-purple-800 flex items-center">
+    <i class="fas fa-history mr-2"></i>Mis Pedidos
+  </h2>
+  <div id="ordersList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+</main>
+
+<!-- Admin -->
+<main id="adminSection" class="hidden p-4">
+  <h2 class="text-2xl font-bold mb-6 text-purple-800 flex items-center">
+    <i class="fas fa-cog mr-2"></i>Panel de Pedidos
+  </h2>
+  <div id="adminList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+</main>
+
+<!-- Comentarios generales de la app -->
+<main id="commentsSection" class="p-4">
+  <h2 class="text-2xl font-bold mb-6 text-purple-800 flex items-center">
+    <i class="fas fa-comments mr-2"></i>Comentarios Generales
+  </h2>
+  <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+    <textarea id="generalCommentInput" placeholder="Escribe tu comentario sobre la tienda..." class="w-full p-3 rounded border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 mb-3"></textarea>
+    <button id="sendGeneralCommentBtn" class="btn-primary w-full md:w-auto">
+      <i class="fas fa-paper-plane mr-1"></i>Enviar Comentario
+    </button>
+  </div>
+  <div id="generalCommentsList" class="flex flex-col gap-4"></div>
+</main>
+
+<!-- Carrito -->
+<div id="cartBtn">
+  <i class="fas fa-shopping-cart"></i>
+  <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hidden">0</span>
+</div>
+<div id="cartContainer">
+  <h3 class="font-bold mb-4 text-lg text-purple-800 flex items-center">
+    <i class="fas fa-shopping-cart mr-2"></i>Carrito
+  </h3>
+  <ul id="cart-list" class="mb-3"></ul>
+  <p id="cartTotal" class="font-bold mb-3 text-lg hidden">Total: $0</p>
+  <div id="paymentInfo" class="mb-3 p-3 bg-purple-50 rounded-lg hidden">
+    <p class="font-semibold text-purple-800 mb-2">Información de pago:</p>
+    <p><strong>Tarjeta:</strong> 9224 0699 9669 7302</p>
+    <p><strong>Móvil:</strong> 59558767</p>
+    <p class="text-red-600 font-bold mt-2 text-sm">⚠️ Una vez realizada la transferencia, envía un mensaje por WhatsApp con la captura del comprobante.</p>
+  </div>
+  <button id="sendOrderBtn" class="btn-primary w-full py-3 text-lg hidden">
+    <i class="fas fa-paper-plane mr-2"></i>Enviar Pedido
+  </button>
+  <button id="clearCartBtn" class="btn-secondary w-full mt-2 hidden">
+    <i class="fas fa-trash mr-2"></i>Vaciar Carrito
+  </button>
+</div>
+
+<!-- Modal Perfil -->
+<div id="profileModal" class="flex">
+  <div id="profileContent" class="fade-in">
+    <button class="closeProfile">&times;</button>
+    <h2 class="text-2xl font-bold mb-4 text-purple-800 flex items-center">
+      <i class="fas fa-user-circle mr-2"></i>Perfil
+    </h2>
+    <div class="mb-3">
+      <p class="text-sm text-gray-600">Correo electrónico</p>
+      <p id="profileEmail" class="font-medium"></p>
+    </div>
+    <div class="mb-4">
+      <p class="text-sm text-gray-600">Teléfono</p>
+      <p id="profilePhone" class="font-medium"></p>
+    </div>
+    <button id="profileSignOutBtn" class="btn-primary w-full">
+      <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+    </button>
+  </div>
+</div>
+
+<!-- Modal Partitura -->
+<div id="scoreModal" class="flex">
+  <div id="scoreContentModal" class="fade-in">
+    <button class="closeScore">&times;</button>
+    <div class="score-details-grid mb-6">
+      <div>
+        <img id="scorePreview" src="" alt="Vista previa" class="w-full h-64 object-contain rounded-lg shadow-md mb-4">
+        <div id="pdfPreview" class="pdf-preview-container hidden"></div>
+        <audio controls id="scoreAudio" class="w-full mb-4"></audio>
+      </div>
+      <div>
+        <h2 id="scoreTitle" class="text-2xl font-bold text-purple-800 mb-2"></h2>
+        <p id="scoreComposer" class="text-sm text-gray-600 mb-3"><i class="fas fa-user mr-1"></i>Compositor: <span class="font-medium"></span></p>
+        <p id="scorePrice" class="text-xl font-bold mb-4 text-purple-700"></p>
+        
+        <div id="scoreDescription" class="mb-4 text-gray-700"></div>
+        
+        <div id="scoreDetails" class="mb-4 p-4 bg-purple-50 rounded-lg">
+          <div class="score-info-item">
+            <i class="fas fa-clock"></i>
+            <span>Duración: </span>
+            <span id="scoreDuration" class="font-medium">--:--</span>
+          </div>
+          <div class="score-info-item">
+            <i class="fas fa-sliders-h"></i>
+            <span>Dificultad: </span>
+            <span id="scoreDifficulty" class="font-medium">--</span>
+          </div>
+          <div class="score-info-item">
+            <i class="fas fa-music"></i>
+            <span>Instrumento: </span>
+            <span id="scoreInstrument" class="font-medium">--</span>
+          </div>
+          <div class="score-info-item">
+            <i class="fas fa-file-alt"></i>
+            <span>Páginas: </span>
+            <span id="scorePages" class="font-medium">--</span>
+          </div>
+        </div>
+        
+        <button id="addToCartModalBtn" class="btn-primary w-full py-3">
+          <i class="fas fa-cart-plus mr-2"></i>Añadir al Carrito
+        </button>
+      </div>
+    </div>
+    
+    <div class="border-t pt-6">
+      <h3 class="text-xl font-bold mb-4 text-purple-800 flex items-center">
+        <i class="fas fa-comments mr-2"></i>Comentarios de esta Partitura
+      </h3>
+      <div class="bg-white p-4 rounded-lg shadow-md mb-4">
+        <textarea id="scoreCommentInput" placeholder="Escribe tu comentario sobre esta partitura..." class="w-full p-3 rounded border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 mb-3"></textarea>
+        <button id="scoreSendCommentBtn" class="btn-primary w-full md:w-auto">
+          <i class="fas fa-paper-plane mr-1"></i>Enviar Comentario
+        </button>
+      </div>
+      <div id="scoreCommentsList" class="flex flex-col gap-4"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Administración -->
+<div id="adminModal" class="flex">
+  <div id="adminModalContent" class="fade-in">
+    <button class="closeAdminModal">&times;</button>
+    <h2 class="text-2xl font-bold mb-6 text-purple-800 flex items-center">
+      <i class="fas fa-cog mr-2"></i>Panel de Administración
+    </h2>
+    
+    <div class="mb-6">
+      <h3 class="text-xl font-bold mb-4 text-purple-700 flex items-center">
+        <i class="fas fa-check-circle mr-2"></i>Aprobar Pedidos
+      </h3>
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Partitura</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="adminOrdersTable">
+            <!-- Los pedidos se cargarán aquí -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <h3 class="text-xl font-bold mb-4 text-purple-700 flex items-center">
+        <i class="fas fa-users mr-2"></i>Usuarios Registrados
+      </h3>
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Fecha Registro</th>
+              <th>Verificado</th>
+            </tr>
+          </thead>
+          <tbody id="adminUsersTable">
+            <!-- Los usuarios se cargarán aquí -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para añadir partituras -->
+<div id="addScoreModal" class="flex">
+  <div id="addScoreModalContent" class="fade-in">
+    <button class="closeAddScoreModal">&times;</button>
+    <h2 class="text-2xl font-bold mb-6 text-purple-800 flex items-center">
+      <i class="fas fa-plus-circle mr-2"></i>Añadir Nueva Partitura
+    </h2>
+    
+    <form id="addScoreForm">
+      <div class="form-group">
+        <label for="scoreTitleInput">Título *</label>
+        <input type="text" id="scoreTitleInput" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="scoreComposerInput">Compositor *</label>
+        <input type="text" id="scoreComposerInput" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="scorePriceInput">Precio ($) *</label>
+        <input type="number" id="scorePriceInput" min="0" step="0.01" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="scoreDescriptionInput">Descripción</label>
+        <textarea id="scoreDescriptionInput" rows="3"></textarea>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="form-group">
+          <label for="scoreDifficultyInput">Dificultad</label>
+          <select id="scoreDifficultyInput">
+            <option value="Fácil">Fácil</option>
+            <option value="Media" selected>Media</option>
+            <option value="Difícil">Difícil</option>
+            <option value="Avanzada">Avanzada</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="scoreInstrumentInput">Instrumento</label>
+          <input type="text" id="scoreInstrumentInput">
+        </div>
+        
+        <div class="form-group">
+          <label for="scorePagesInput">Número de páginas</label>
+          <input type="number" id="scorePagesInput" min="1">
+        </div>
+        
+        <div class="form-group">
+          <label for="scoreDurationInput">Duración (mm:ss)</label>
+          <input type="text" id="scoreDurationInput" placeholder="Ej: 3:45">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="scoreMxlFile">Archivo MXL (para extraer instrumentos automáticamente)</label>
+        <input type="file" id="scoreMxlFile" accept=".mxl,.xml">
+        <div class="progress-bar hidden" id="mxlProgressBar">
+          <div class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+        <button type="button" id="extractInstrumentsBtn" class="btn-secondary mt-2 hidden">
+          <i class="fas fa-magic mr-1"></i>Extraer instrumentos
+        </button>
+        <div id="extractedInstruments" class="mt-2 p-2 bg-purple-50 rounded hidden">
+          <p class="text-sm font-semibold mb-1">Instrumentos detectados:</p>
+          <div id="instrumentsList"></div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="scoreCoverFile">Carátula (Imagen) *</label>
+        <input type="file" id="scoreCoverFile" accept="image/*" required>
+        <div class="progress-bar hidden" id="coverProgressBar">
+          <div class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="scorePdfFile">Archivo PDF *</label>
+        <input type="file" id="scorePdfFile" accept=".pdf" required>
+        <div class="progress-bar hidden" id="pdfProgressBar">
+          <div class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="scoreAudioFile">Audio (MP3)</label>
+        <input type="file" id="scoreAudioFile" accept="audio/*">
+        <div class="progress-bar hidden" id="audioProgressBar">
+          <div class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="scoreMidiFile">Archivo MIDI</label>
+        <input type="file" id="scoreMidiFile" accept=".mid,.midi">
+        <div class="progress-bar hidden" id="midiProgressBar">
+          <div class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn-primary w-full py-3 mt-4" id="submitScoreBtn">
+        <i class="fas fa-save mr-2"></i>Guardar Partitura
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de vista ampliada de PDF -->
+<div id="pdfViewerModal" class="flex">
+  <div id="pdfViewerContent" class="fade-in">
+    <button class="closePdfViewer">&times;</button>
+    <div id="pdfViewerContainer" class="mt-4">
+      <!-- El PDF se cargará aquí -->
+    </div>
+    <div class="flex justify-center mt-4 gap-2">
+      <button id="prevPage" class="btn-secondary">
+        <i class="fas fa-chevron-left mr-1"></i>Anterior
+      </button>
+      <span id="pageInfo" class="mx-3 flex items-center">Página 1 de 1</span>
+      <button id="nextPage" class="btn-secondary">
+        Siguiente<i class="fas fa-chevron-right ml-1"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edición de partitura -->
+<div id="editScoreModal" class="flex hidden">
+  <div id="editScoreModalContent" class="fade-in bg-white rounded-lg p-6 w-11/12 max-w-2xl max-h-90vh overflow-y-auto">
+    <button class="closeEditScoreModal absolute top-4 right-4 text-2xl text-red-500">&times;</button>
+    <h2 class="text-2xl font-bold mb-6 text-purple-800 flex items-center">
+      <i class="fas fa-edit mr-2"></i>Editar Partitura
+    </h2>
+    
+    <form id="editScoreForm">
+      <input type="hidden" id="editScoreId">
+      
+      <div class="form-group">
+        <label for="editScoreTitle">Título *</label>
+        <input type="text" id="editScoreTitle" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="editScoreComposer">Compositor *</label>
+        <input type="text" id="editScoreComposer" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="editScorePrice">Precio ($) *</label>
+        <input type="number" id="editScorePrice" min="0" step="0.01" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="editScoreDescription">Descripción</label>
+        <textarea id="editScoreDescription" rows="3"></textarea>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="form-group">
+          <label for="editScoreDifficulty">Dificultad</label>
+          <select id="editScoreDifficulty">
+            <option value="Fácil">Fácil</option>
+            <option value="Media">Media</option>
+            <option value="Difícil">Difícil</option>
+            <option value="Avanzada">Avanzada</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="editScoreInstrument">Instrumento</label>
+          <input type="text" id="editScoreInstrument">
+        </div>
+        
+        <div class="form-group">
+          <label for="editScorePages">Número de páginas</label>
+          <input type="number" id="editScorePages" min="1">
+        </div>
+        
+        <div class="form-group">
+          <label for="editScoreDuration">Duración (mm:ss)</label>
+          <input type="text" id="editScoreDuration" placeholder="Ej: 3:45">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Carátula actual</label>
+        <img id="editScoreCurrentCover" src="" class="w-32 h-24 object-contain border rounded">
+        <label for="editScoreCoverFile" class="block mt-2">Nueva carátula (opcional)</label>
+        <input type="file" id="editScoreCoverFile" accept="image/*">
+      </div>
+      
+      <button type="submit" class="btn-primary w-full py-3 mt-4">
+        <i class="fas fa-save mr-2"></i>Guardar Cambios
+      </button>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const supabaseUrl = "https://psljvtedkopmnnbukfxd.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzbGp2dGVka29wbW5uYnVrZnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0MDQyMDgsImV4cCI6MjA3MTk4MDIwOH0.HDAvJs0MxY16cudkVJG-5qYGFOYHPjK2eQMmnSfgztA"; 
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+let user=null, cart=[], catalog=[];
+let currentScoreId=null;
+let currentView = 'grid'; // 'grid' or 'list'
+let currentPdf = null;
+let currentPage = 1;
+let totalPages = 1;
+
+// Configuración de PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+// Configuración de Tailwind
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        primary: '#7c3aed',
+        secondary: '#6d28d9',
+        accent: '#8b5cf6',
+        light: '#f5f3ff',
+        dark: '#1f2937'
+      }
+    }
+  }
+};
+
+// Referencias a elementos DOM
+const catalogEl=document.getElementById('catalog');
+const ordersSection=document.getElementById('ordersSection');
+const ordersList=document.getElementById('ordersList');
+const adminSection=document.getElementById('adminSection');
+const adminList=document.getElementById('adminList');
+
+const cartList=document.getElementById('cart-list');
+const cartTotal=document.getElementById('cartTotal');
+const paymentInfo=document.getElementById('paymentInfo');
+const sendOrderBtn=document.getElementById('sendOrderBtn');
+const clearCartBtn=document.getElementById('clearCartBtn');
+const cartCount=document.getElementById('cartCount');
+
+const loginBtn=document.getElementById('loginBtn');
+const signupBtn=document.getElementById('signupBtn');
+const profileBtn=document.getElementById('profileBtn');
+const ordersBtn=document.getElementById('ordersBtn');
+const adminBtn=document.getElementById('adminBtn');
+const catalogBtn=document.getElementById('catalogBtn');
+const addScoreBtn=document.getElementById('addScoreBtn');
+const searchInput=document.getElementById('search');
+const viewToggleBtn=document.getElementById('viewToggleBtn');
+
+const cartBtn=document.getElementById('cartBtn');
+const cartContainer=document.getElementById('cartContainer');
+cartBtn.addEventListener('click', ()=>{cartContainer.style.display=cartContainer.style.display==='none'?'block':'none';});
+
+// -------------------- FUNCIONES DE NOTIFICACIÓN --------------------
+function showNotification(message, type = 'info') {
+  // Crear elemento de notificación
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  
+  // Icono según el tipo
+  let icon = 'fa-info-circle';
+  if (type === 'success') icon = 'fa-check-circle';
+  if (type === 'error') icon = 'fa-exclamation-circle';
+  if (type === 'warning') icon = 'fa-exclamation-triangle';
+  
+  notification.innerHTML = `
+    <div class="flex items-center">
+      <i class="fas ${icon} mr-2"></i>
+      <span>${message}</span>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Mostrar notificación
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+  
+  // Ocultar y eliminar después de 3 segundos
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, 3000);
+}
+
+// -------------------- CATALOGO --------------------
+async function loadCatalog(){
+  const { data, error } = await supabase.from('scores').select('*').order('title',{ascending:true});
+  if(error) return alert(error.message);
+  catalog = data || [];
+  renderCatalog();
+}
+
+function renderCatalog(){
+  const query = searchInput.value.toLowerCase();
+  catalogEl.innerHTML='';
+  
+  // Aplicar clase según la vista actual
+  if (currentView === 'list') {
+    catalogEl.classList.remove('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-4');
+    catalogEl.classList.add('list-view');
+  } else {
+    catalogEl.classList.remove('list-view');
+    catalogEl.classList.add('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-4');
+  }
+  
+  if (catalog.length === 0) {
+    catalogEl.innerHTML = `
+      <div class="col-span-full text-center py-10">
+        <i class="fas fa-music text-5xl text-purple-300 mb-4"></i>
+        <p class="text-xl text-gray-600">No hay partituras disponibles en este momento</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const filteredCatalog = catalog.filter(item=>item.title.toLowerCase().includes(query));
+  
+  if (filteredCatalog.length === 0) {
+    catalogEl.innerHTML = `
+      <div class="col-span-full text-center py-10">
+        <i class="fas fa-search text-5xl text-purple-300 mb-4"></i>
+        <p class="text-xl text-gray-600">No se encontraron partituras</p>
+        <p class="text-gray-500">Intenta con otros términos de búsqueda</p>
+      </div>
+    `;
+    return;
+  }
+  
+  filteredCatalog.forEach(item=>{
+    const card=document.createElement('div');
+    card.className='card bg-white rounded-lg shadow-md p-4 flex flex-col items-center fade-in';
+    
+    if (currentView === 'list') {
+      card.innerHTML=`
+        <img src="${item.cover_url||'https://via.placeholder.com/300x200?text=Partitura'}" alt="${item.title}" class="w-40 h-32 object-contain rounded mb-3">
+        <div class="card-content">
+          <h2 class="font-bold text-purple-800 mb-1">${item.title}</h2>
+          <p class="text-sm text-gray-600 mb-1"><i class="fas fa-user mr-1"></i>${item.composer||'Desconocido'}</p>
+          <p class="text-lg font-bold mb-3 text-purple-700">$${item.price||0}</p>
+          <div class="mt-auto">
+            <audio controls src="${item.audio_url||''}" class="w-full mb-3"></audio>
+            <button class="btn-primary">
+              <i class="fas fa-cart-plus mr-1"></i>Añadir al Carrito
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      card.innerHTML=`
+        <img src="${item.cover_url||'https://via.placeholder.com/300x200?text=Partitura'}" alt="${item.title}" class="w-full h-48 object-contain rounded mb-3">
+        <h2 class="font-bold text-purple-800 mb-1 text-center">${item.title}</h2>
+        <p class="text-sm text-gray-600 mb-1 text-center"><i class="fas fa-user mr-1"></i>${item.composer||'Desconocido'}</p>
+        <p class="text-lg font-bold mb-3 text-purple-700">$${item.price||0}</p>
+        <div class="mt-auto w-full">
+          <audio controls src="${item.audio_url||''}" class="w-full mb-3"></audio>
+          <button class="btn-primary w-full">
+            <i class="fas fa-cart-plus mr-1"></i>Añadir al Carrito
+          </button>
+        </div>
+      `;
+    }
+    
+    card.querySelector('button').addEventListener('click', e=>{ e.stopPropagation(); addToCart(item); });
+    card.addEventListener('click', ()=>openScoreModal(item));
+    
+    // Añadir botón de edición para administradores
+    if (user && user.profile?.is_admin) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn-secondary mt-2';
+      editBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>Editar';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditScoreModal(item);
+      });
+      
+      if (currentView === 'list') {
+        card.querySelector('.card-content').appendChild(editBtn);
+      } else {
+        card.appendChild(editBtn);
+      }
+    }
+    
+    catalogEl.appendChild(card);
+  });
+}
+
+// -------------------- TOGGLE DE VISTA --------------------
+viewToggleBtn.addEventListener('click', () => {
+  currentView = currentView === 'grid' ? 'list' : 'grid';
+  viewToggleBtn.innerHTML = currentView === 'grid' ? '<i class="fas fa-list"></i>' : '<i class="fas fa-th-large"></i>';
+  renderCatalog();
+  
+  // Guardar preferencia en localStorage
+  localStorage.setItem('preferredView', currentView);
+});
+
+// Cargar preferencia de vista al iniciar
+const savedView = localStorage.getItem('preferredView');
+if (savedView) {
+  currentView = savedView;
+  viewToggleBtn.innerHTML = currentView === 'grid' ? '<i class="fas fa-list"></i>' : '<i class="fas fa-th-large"></i>';
+}
+
+// -------------------- CARRITO --------------------
+function addToCart(item){
+  if(!user) return showNotification('Debes iniciar sesión para añadir al carrito', 'warning');
+  const existing = cart.find(c=>c.id===item.id);
+  if(existing){ existing.qty+=1; } else { cart.push({...item, qty:1}); }
+  renderCart();
+  showNotification(`"${item.title}" añadida al carrito`, 'success');
+}
+
+function renderCart(){
+  cartList.innerHTML='';
+  let total=0;
+  let totalItems = 0;
+  
+  cart.forEach(i=>{
+    total += (i.price||0)*i.qty;
+    totalItems += i.qty;
+    const li=document.createElement('li');
+    li.className="flex justify-between items-center mb-3 p-2 bg-purple-50 rounded-lg";
+    li.innerHTML=`
+      <div class="flex-1">
+        <p class="font-medium">${i.title}</p>
+        <p class="text-sm text-gray-600">$${i.price||0} x ${i.qty} = $${(i.price||0)*i.qty}</p>
+      </div>
+      <div class="flex gap-2">
+        <button class="bg-purple-200 text-purple-800 px-2 rounded-full"><i class="fas fa-minus"></i></button>
+        <button class="bg-purple-200 text-purple-800 px-2 rounded-full"><i class="fas fa-plus"></i></button>
+      </div>
+    `;
+    li.querySelector('button:nth-child(1)').addEventListener('click', ()=>{
+      i.qty-=1;
+      if(i.qty<=0) cart=cart.filter(c=>c.id!==i.id);
+      renderCart();
+    });
+    li.querySelector('button:nth-child(2)').addEventListener('click', ()=>{
+      i.qty+=1; renderCart();
+    });
+    cartList.appendChild(li);
+  });
+  
+  if(cart.length>0){
+    cartTotal.classList.remove('hidden'); 
+    cartTotal.textContent=`Total: $${total}`; 
+    paymentInfo.classList.remove('hidden'); 
+    sendOrderBtn.classList.remove('hidden');
+    clearCartBtn.classList.remove('hidden');
+    cartCount.classList.remove('hidden');
+    cartCount.textContent = totalItems > 9 ? '9+' : totalItems;
+  } else {
+    cartTotal.classList.add('hidden'); 
+    paymentInfo.classList.add('hidden'); 
+    sendOrderBtn.classList.add('hidden');
+    clearCartBtn.classList.add('hidden');
+    cartCount.classList.add('hidden');
+    cartList.innerHTML = '<li class="text-center text-gray-500 py-4"><i class="fas fa-shopping-cart text-2xl mb-2"></i><p>Tu carrito está vacío</p></li>';
+  }
+}
+
+// Vaciar carrito
+clearCartBtn.addEventListener('click', ()=>{
+  if (cart.length === 0) return;
+  if (confirm('¿Estás seguro de que quieres vaciar el carrito?')) {
+    cart = [];
+    renderCart();
+    showNotification('Carrito vaciado', 'info');
+  }
+});
+
+// -------------------- PEDIDOS --------------------
+sendOrderBtn.addEventListener('click', async ()=>{
+  if(cart.length===0) return;
+  
+  // Confirmar antes de enviar
+  if (!confirm(`¿Confirmar pedido por un total de $${cart.reduce((sum, item) => sum + (item.price * item.qty), 0)}?`)) {
+    return;
+  }
+  
+  for(const item of cart){ 
+    for(let i=0;i<item.qty;i++){ 
+      await supabase.from('purchases').insert([{ user_id: user.id, score_id: item.id, approved:false }]); 
+    } 
+  }
+  cart=[]; 
+  renderCart(); 
+  showNotification('Pedido enviado. Espera aprobación del administrador.', 'success');
+});
+
+// -------------------- VER PEDIDOS USUARIO --------------------
+async function loadOrders(){
+  ordersList.innerHTML='';
+  const { data, error } = await supabase.from('purchases').select('*, scores(*)').eq('user_id', user.id);
+  if(error) return alert(error.message);
+  if(!data || data.length===0){
+    const msg=document.createElement('div');
+    msg.className="no-orders-msg col-span-full"; 
+    msg.innerHTML = `<div><i class="fas fa-inbox text-4xl mb-3"></i><p>No hay pedidos</p></div>`; 
+    ordersList.appendChild(msg); 
+    return;
+  }
+  data.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='card bg-white rounded-lg shadow-md p-4 flex flex-col items-center fade-in';
+    div.innerHTML=`
+      <img src="${p.scores.cover_url||'https://via.placeholder.com/300x200?text=Partitura'}" alt="${p.scores.title}" class="w-full h-40 object-contain rounded mb-3">
+      <h2 class="font-bold text-purple-800 mb-1 text-center">${p.scores.title}</h2>
+      <p class="text-sm text-gray-600 mb-3 text-center"><i class="fas fa-user mr-1"></i>${p.scores.composer||'Desconocido'}</p>
+      <div class="actions flex flex-col gap-2 w-full"></div>
+    `;
+    const actions=div.querySelector('.actions');
+    if(p.approved){
+      actions.innerHTML = `<p class="text-green-600 font-bold text-center mb-2"><i class="fas fa-check-circle mr-1"></i>Aprobado</p>`;
+      
+      // Contador de descargas realizadas
+      let downloadsCompleted = 0;
+      if(p.pdf_downloaded) downloadsCompleted++;
+      if(p.midi_downloaded) downloadsCompleted++;
+      if(p.audio_downloaded) downloadsCompleted++;
+      
+      if(p.scores.pdf_url){ 
+        const btn=document.createElement('button'); 
+        btn.className="btn-primary"; 
+        btn.innerHTML=`<i class="fas fa-file-pdf mr-1"></i>Descargar PDF ${p.pdf_downloaded ? '<span class="download-badge completed">✓</span>' : '<span class="download-badge pending">!</span>'}`; 
+        btn.addEventListener('click', async ()=>{ 
+          if(p.pdf_downloaded){ 
+            showNotification("Ya descargaste el PDF.", 'warning');
+            return; 
+          } 
+          window.open(p.scores.pdf_url,"_blank"); 
+          await supabase.from('purchases').update({pdf_downloaded:true}).eq('id',p.id); 
+          p.pdf_downloaded=true;
+          
+          // Verificar si se completaron las 3 descargas
+          if(p.pdf_downloaded && p.midi_downloaded && p.audio_downloaded) {
+            // Eliminar el pedido de la base de datos y de la lista
+            await supabase.from('purchases').delete().eq('id', p.id);
+            setTimeout(() => {
+              div.remove();
+              showNotification('¡Todas las descargas completadas! El pedido se ha eliminado.', 'success');
+              
+              // Si no quedan pedidos, mostrar mensaje
+              if(document.querySelectorAll('#ordersList > div').length === 0) {
+                ordersList.innerHTML = `
+                  <div class="no-orders-msg col-span-full">
+                    <div><i class="fas fa-check-circle text-4xl mb-3"></i><p>No hay pedidos pendientes</p></div>
+                  </div>
+                `;
+              }
+            }, 2000);
+          } else {
+            // Actualizar el botón
+            btn.innerHTML=`<i class="fas fa-file-pdf mr-1"></i>Descargar PDF <span class="download-badge completed">✓</span>`;
+          }
+        }); 
+        actions.appendChild(btn); 
+      }
+      
+      if(p.scores.midi_url){ 
+        const btn=document.createElement('button'); 
+        btn.className="btn-primary"; 
+        btn.innerHTML=`<i class="fas fa-music mr-1"></i>Descargar MIDI ${p.midi_downloaded ? '<span class="download-badge completed">✓</span>' : '<span class="download-badge pending">!</span>'}`; 
+        btn.addEventListener('click', async ()=>{ 
+          if(p.midi_downloaded){ 
+            showNotification("Ya descargaste el MIDI.", 'warning');
+            return; 
+          } 
+          window.open(p.scores.midi_url,"_blank"); 
+          await supabase.from('purchases').update({midi_downloaded:true}).eq('id',p.id); 
+          p.midi_downloaded=true;
+          
+          // Verificar si se completaron las 3 descargas
+          if(p.pdf_downloaded && p.midi_downloaded && p.audio_downloaded) {
+            // Eliminar el pedido de la base de datos y de la lista
+            await supabase.from('purchases').delete().eq('id', p.id);
+            setTimeout(() => {
+              div.remove();
+              showNotification('¡Todas las descargas completadas! El pedido se ha eliminado.', 'success');
+              
+              // Si no quedan pedidos, mostrar mensaje
+              if(document.querySelectorAll('#ordersList > div').length === 0) {
+                ordersList.innerHTML = `
+                  <div class="no-orders-msg col-span-full">
+                    <div><i class="fas fa-check-circle text-4xl mb-3"></i><p>No hay pedidos pendientes</p></div>
+                  </div>
+                `;
+              }
+            }, 2000);
+          } else {
+            // Actualizar el botón
+            btn.innerHTML=`<i class="fas fa-music mr-1"></i>Descargar MIDI <span class="download-badge completed">✓</span>`;
+          }
+        }); 
+        actions.appendChild(btn); 
+      }
+      
+      if(p.scores.audio_url){ 
+        const btn=document.createElement('button'); 
+        btn.className="btn-primary"; 
+        btn.innerHTML=`<i class="fas fa-file-audio mr-1"></i>Descargar MP3 ${p.audio_downloaded ? '<span class="download-badge completed">✓</span>' : '<span class="download-badge pending">!</span>'}`; 
+        btn.addEventListener('click', async ()=>{ 
+          if(p.audio_downloaded){ 
+            showNotification("Ya descargaste el MP3.", 'warning');
+            return; 
+          } 
+          window.open(p.scores.audio_url,"_blank"); 
+          await supabase.from('purchases').update({audio_downloaded:true}).eq('id',p.id); 
+          p.audio_downloaded=true;
+          
+          // Verificar si se completaron las 3 descargas
+          if(p.pdf_downloaded && p.midi_downloaded && p.audio_downloaded) {
+            // Eliminar el pedido de la base de datos y de la lista
+            await supabase.from('purchases').delete().eq('id', p.id);
+            setTimeout(() => {
+              div.remove();
+              showNotification('¡Todas las descargas completadas! El pedido se ha eliminado.', 'success');
+              
+              // Si no quedan pedidos, mostrar mensaje
+              if(document.querySelectorAll('#ordersList > div').length === 0) {
+                ordersList.innerHTML = `
+                  <div class="no-orders-msg col-span-full">
+                    <div><i class="fas fa-check-circle text-4xl mb-3"></i><p>No hay pedidos pendientes</p></div>
+                  </div>
+                `;
+              }
+            }, 2000);
+          } else {
+            // Actualizar el botón
+            btn.innerHTML=`<i class="fas fa-file-audio mr-1"></i>Descargar MP3 <span class="download-badge completed">✓</span>`;
+          }
+        }); 
+        actions.appendChild(btn); 
+      }
+    } else { 
+      actions.innerHTML=`<span class="text-orange-500 font-bold text-center"><i class="fas fa-clock mr-1"></i>En espera de aprobación</span>`; 
+    }
+    ordersList.appendChild(div);
+  });
+}
+
+// -------------------- PANEL ADMIN --------------------
+async function loadAdmin(){
+  adminList.innerHTML='';
+  
+  try {
+    // Primero obtener los usuarios para poder relacionarlos manualmente
+    const { data: usersData, error: usersError } = await supabase.from('users').select('id, email');
+    if(usersError) throw usersError;
+    
+    // Obtener las compras pendientes
+    const { data: purchasesData, error: purchasesError } = await supabase
+      .from('purchases')
+      .select('*, scores(*)')
+      .eq('approved', false);
+    
+    if(purchasesError) throw purchasesError;
+    
+    if(!purchasesData || purchasesData.length===0){
+      const msg=document.createElement('div');
+      msg.className="no-orders-msg col-span-full"; 
+      msg.innerHTML = `<div><i class="fas fa-check-circle text-4xl mb-3"></i><p>No hay pedidos pendientes</p></div>`; 
+      adminList.appendChild(msg); 
+      return;
+    }
+    
+    // Relacionar manualmente los usuarios con las compras
+    const purchasesWithUsers = purchasesData.map(purchase => {
+      const user = usersData.find(u => u.id === purchase.user_id);
+      return {
+        ...purchase,
+        users: user ? { email: user.email } : { email: 'Usuario desconocido' }
+      };
+    });
+    
+    purchasesWithUsers.forEach(p=>{
+      const div=document.createElement('div');
+      div.className='card bg-white rounded-lg shadow-md p-4 flex flex-col items-center fade-in';
+      div.innerHTML=`
+        <img src="${p.scores.cover_url||'https://via.placeholder.com/300x200?text=Partitura'}" alt="${p.scores.title}" class="w-full h-40 object-contain rounded mb-3">
+        <h2 class="font-bold text-purple-800 mb-1 text-center">${p.scores.title}</h2>
+        <p class="text-sm text-gray-600 mb-3 text-center"><i class="fas fa-user mr-1"></i>${p.users.email}</p>
+        <button class="btn-primary w-full">
+          <i class="fas fa-check-circle mr-1"></i>Aprobar
+        </button>
+      `;
+      div.querySelector('button').addEventListener('click', async ()=> {
+        await supabase.from('purchases').update({approved:true}).eq('id', p.id);
+        showNotification(`Pedido de ${p.scores.title} aprobado`, 'success');
+        loadAdmin();
+      });
+      adminList.appendChild(div);
+    });
+  } catch (error) {
+    console.error('Error loading admin data:', error);
+    showNotification('Error al cargar los datos de administración: ' + error.message, 'error');
+  }
+}
+
+// -------------------- CARGAR TABLA DE ADMINISTRACIÓN --------------------
+async function loadAdminOrdersTable() {
+  const adminOrdersTable = document.getElementById('adminOrdersTable');
+  adminOrdersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4">Cargando...</td></tr>';
+  
+  try {
+    // Primero obtener los usuarios para poder relacionarlos manualmente
+    const { data: usersData, error: usersError } = await supabase.from('users').select('id, email');
+    if(usersError) throw usersError;
+    
+    // Obtener las compras pendientes
+    const { data: purchasesData, error: purchasesError } = await supabase
+      .from('purchases')
+      .select('*, scores(*)')
+      .eq('approved', false)
+      .order('created_at', { ascending: false });
+    
+    if(purchasesError) throw purchasesError;
+    
+    if(!purchasesData || purchasesData.length===0){
+      adminOrdersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4">No hay pedidos pendientes de aprobación</td></tr>';
+      return;
+    }
+    
+    // Relacionar manualmente los usuarios con las compras
+    const purchasesWithUsers = purchasesData.map(purchase => {
+      const user = usersData.find(u => u.id === purchase.user_id);
+      return {
+        ...purchase,
+        users: user ? { email: user.email } : { email: 'Usuario desconocido' }
+      };
+    });
+    
+    adminOrdersTable.innerHTML = '';
+    
+    purchasesWithUsers.forEach(p => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${p.users.email}</td>
+        <td>${p.scores.title}</td>
+        <td>${new Date(p.created_at).toLocaleDateString()}</td>
+        <td>
+          <button class="btn-primary approve-btn" data-id="${p.id}">
+            <i class="fas fa-check mr-1"></i>Aprobar
+          </button>
+        </td>
+      `;
+      adminOrdersTable.appendChild(row);
+    });
+    
+    // Agregar event listeners a los botones de aprobación
+    document.querySelectorAll('.approve-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const purchaseId = e.target.closest('.approve-btn').dataset.id;
+        await supabase.from('purchases').update({approved: true}).eq('id', purchaseId);
+        showNotification('Pedido aprobado correctamente', 'success');
+        loadAdminOrdersTable();
+      });
+    });
+  } catch (error) {
+    console.error('Error loading admin orders table:', error);
+    adminOrdersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error al cargar los pedidos</td></tr>';
+  }
+}
+
+// -------------------- CARGAR TABLA DE USUARIOS --------------------
+async function loadAdminUsersTable() {
+  const adminUsersTable = document.getElementById('adminUsersTable');
+  adminUsersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4">Cargando...</td></tr>';
+  
+  try {
+    // Obtener usuarios
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if(usersError) throw usersError;
+    
+    if(!usersData || usersData.length===0){
+      adminUsersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4">No hay usuarios registrados</td></tr>';
+      return;
+    }
+    
+    adminUsersTable.innerHTML = '';
+    
+    usersData.forEach(user => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${user.email}</td>
+        <td>${user.phone || 'No proporcionado'}</td>
+        <td>${new Date(user.created_at).toLocaleDateString()}</td>
+        <td>${user.email_confirmed_at ? 'Sí' : 'No'}</td>
+      `;
+      adminUsersTable.appendChild(row);
+    });
+  } catch (error) {
+    console.error('Error loading admin users table:', error);
+    adminUsersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error al cargar los usuarios</td></tr>';
+  }
+}
+
+// -------------------- EXTRACCIÓN DE INSTRUMENTOS DESDE ARCHIVOS MXL --------------------
+document.getElementById('scoreMxlFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('extractInstrumentsBtn').classList.remove('hidden');
+  } else {
+    document.getElementById('extractInstrumentsBtn').classList.add('hidden');
+    document.getElementById('extractedInstruments').classList.add('hidden');
+  }
+});
+
+document.getElementById('extractInstrumentsBtn').addEventListener('click', async function() {
+  const file = document.getElementById('scoreMxlFile').files[0];
+  if (!file) return;
+  
+  try {
+    showNotification('Procesando archivo MXL...', 'info');
+    
+    // Leer el archivo MXL
+    const zip = new JSZip();
+    const contents = await zip.loadAsync(file);
+    
+    // Buscar el archivo MusicXML (.xml) dentro del MXL
+    let xmlFile = null;
+    for (const filename in contents.files) {
+      if (filename.endsWith('.xml')) {
+        xmlFile = contents.files[filename];
+        break;
+      }
+    }
+    
+    if (!xmlFile) {
+      throw new Error('No se encontró un archivo XML dentro del MXL');
+    }
+    
+    // Leer el contenido XML
+    const xmlText = await xmlFile.async('text');
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    
+    // Extraer instrumentos
+    const partElements = xmlDoc.getElementsByTagName('score-part');
+    const instruments = [];
+    
+    for (let i = 0; i < partElements.length; i++) {
+      const partNameElement = partElements[i].getElementsByTagName('part-name')[0];
+      if (partNameElement) {
+        instruments.push(partNameElement.textContent);
+      }
+    }
+    
+    // Mostrar instrumentos extraídos
+    if (instruments.length > 0) {
+      const instrumentsList = document.getElementById('instrumentsList');
+      instrumentsList.innerHTML = '';
+      
+      instruments.forEach(instrument => {
+        const div = document.createElement('div');
+        div.className = 'text-sm flex items-center';
+        div.innerHTML = `<i class="fas fa-music text-purple-500 mr-2"></i> ${instrument}`;
+        instrumentsList.appendChild(div);
+      });
+      
+      document.getElementById('extractedInstruments').classList.remove('hidden');
+      document.getElementById('scoreInstrumentInput').value = instruments.join(', ');
+      
+      showNotification(`${instruments.length} instrumentos detectados`, 'success');
+    } else {
+      showNotification('No se encontraron instrumentos en el archivo', 'warning');
+    }
+  } catch (error) {
+    console.error('Error processing MXL file:', error);
+    showNotification('Error al procesar el archivo MXL: ' + error.message, 'error');
+  }
+});
+
+// -------------------- SUBIDA AUTOMATIZADA DE PARTITURAS --------------------
+document.getElementById('addScoreForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  if (!user || !user.profile?.is_admin) {
+    showNotification('Solo los administradores pueden añadir partituras', 'error');
+    return;
+  }
+  
+  const submitBtn = document.getElementById('submitScoreBtn');
+  const originalBtnText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<div class="loader"></div>';
+  
+  try {
+    // Obtener los archivos
+    const coverFile = document.getElementById('scoreCoverFile').files[0];
+    const pdfFile = document.getElementById('scorePdfFile').files[0];
+    const audioFile = document.getElementById('scoreAudioFile').files[0];
+    const midiFile = document.getElementById('scoreMidiFile').files[0];
+    const mxlFile = document.getElementById('scoreMxlFile').files[0];
+    
+    if (!coverFile || !pdfFile) {
+      throw new Error('La carátula y el PDF son obligatorios');
+    }
+    
+    // Generar nombres únicos para los archivos
+    const timestamp = Date.now();
+    const coverFileName = `cover_${timestamp}_${coverFile.name}`;
+    const pdfFileName = `pdf_${timestamp}_${pdfFile.name}`;
+    const audioFileName = audioFile ? `audio_${timestamp}_${audioFile.name}` : null;
+    const midiFileName = midiFile ? `midi_${timestamp}_${midiFile.name}` : null;
+    const mxlFileName = mxlFile ? `mxl_${timestamp}_${mxlFile.name}` : null;
+    
+    // Subir archivos a Supabase Storage
+    const uploadFile = async (file, fileName, bucket, progressBarId) => {
+      if (!file) return null;
+      
+      if (progressBarId) {
+        const progressBar = document.getElementById(progressBarId);
+        const progressFill = progressBar.querySelector('.progress-bar-fill');
+        progressBar.classList.remove('hidden');
+        
+        const { error } = await supabase.storage
+          .from(bucket)
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false,
+            onUploadProgress: (progress) => {
+              const percentage = (progress.loaded / progress.total) * 100;
+              progressFill.style.width = `${percentage}%`;
+            }
+          });
+          
+        progressBar.classList.add('hidden');
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.storage
+          .from(bucket)
+          .upload(fileName, file);
+        if (error) throw error;
+      }
+      
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(fileName);
+      
+      return publicUrl;
+    };
+    
+    // Subir todos los archivos
+    const coverUrl = await uploadFile(coverFile, coverFileName, 'covers', 'coverProgressBar');
+    const pdfUrl = await uploadFile(pdfFile, pdfFileName, 'pdfs', 'pdfProgressBar');
+    const audioUrl = audioFile ? await uploadFile(audioFile, audioFileName, 'audios', 'audioProgressBar') : null;
+    const midiUrl = midiFile ? await uploadFile(midiFile, midiFileName, 'midis', 'midiProgressBar') : null;
+    const mxlUrl = mxlFile ? await uploadFile(mxlFile, mxlFileName, 'mxls', 'mxlProgressBar') : null;
+    
+    // Crear registro en la base de datos
+    const formData = {
+      title: document.getElementById('scoreTitleInput').value,
+      composer: document.getElementById('scoreComposerInput').value,
+      price: parseFloat(document.getElementById('scorePriceInput').value),
+      description: document.getElementById('scoreDescriptionInput').value,
+      difficulty: document.getElementById('scoreDifficultyInput').value,
+      instrument: document.getElementById('scoreInstrumentInput').value,
+      pages: document.getElementById('scorePagesInput').value ? parseInt(document.getElementById('scorePagesInput').value) : null,
+      duration: document.getElementById('scoreDurationInput').value || null,
+      cover_url: coverUrl,
+      pdf_url: pdfUrl,
+      audio_url: audioUrl,
+      midi_url: midiUrl,
+      mxl_url: mxlUrl
+    };
+    
+    const { data, error } = await supabase.from('scores').insert([formData]).select();
+    
+    if (error) throw error;
+    
+    showNotification('Partitura añadida correctamente', 'success');
+    document.getElementById('addScoreForm').reset();
+    document.getElementById('addScoreModal').style.display = 'none';
+    document.getElementById('extractedInstruments').classList.add('hidden');
+    document.getElementById('extractInstrumentsBtn').classList.add('hidden');
+    
+    // Recargar el catálogo
+    loadCatalog();
+  } catch (error) {
+    console.error('Error adding score:', error);
+    showNotification('Error al añadir la partitura: ' + error.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalBtnText;
+  }
+});
+
+// -------------------- AUTH --------------------
+loginBtn.addEventListener('click', async ()=> {
+  const email = prompt('Correo:');
+  const password = prompt('Contraseña:');
+  if(!email || !password) return;
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if(error) return showNotification(error.message, 'error');
+
+  // Verificar si el usuario ha confirmado su correo
+  if (!data.user.email_confirmed_at) {
+    showNotification('Debes confirmar tu correo electrónico antes de iniciar sesión', 'error');
+    await supabase.auth.signOut();
+    return;
+  }
+
+  user = data.user;
+  const { data: profile, error: profileError } = await supabase.from("users").select("*").eq("id", user.id).single();
+  if(!profileError) user.profile = profile;
+  updateUI();
+  showNotification(`Bienvenido de nuevo, ${user.email.split('@')[0]}`, 'success');
+});
+
+signupBtn.addEventListener('click', async ()=> {
+  const email = prompt('Correo:');
+  const password = prompt('Contraseña:');
+  const phone = prompt('Teléfono:');
+  if(!email || !password || !phone) return;
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { 
+      data: { phone },
+      emailRedirectTo: window.location.origin
+    }
+  });
+  
+  if(error) return showNotification(error.message, 'error');
+
+  // No establecer la sesión automáticamente
+  showNotification(`Cuenta creada exitosamente. Se ha enviado un correo de verificación a ${email}. Por favor, verifica tu cuenta antes de iniciar sesión.`, 'success');
+  
+  // Mostrar mensaje adicional
+  alert('Te hemos enviado un correo de verificación. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para verificar tu cuenta. Una vez verificado, podrás iniciar sesión.');
+});
+
+// -------------------- PERFIL --------------------
+const profileModal = document.getElementById('profileModal');
+const profileEmail = document.getElementById('profileEmail');
+const profilePhone = document.getElementById('profilePhone');
+const profileSignOutBtn = document.getElementById('profileSignOutBtn');
+
+profileBtn.addEventListener('click', ()=>{
+  if(!user) return showNotification("Debes iniciar sesión", 'error');
+  profileEmail.textContent = user.email;
+  profilePhone.textContent = user.profile?.phone || 'No proporcionado';
+  profileModal.style.display='flex';
+});
+
+profileModal.querySelector('.closeProfile').addEventListener('click', ()=>{ profileModal.style.display='none'; });
+profileSignOutBtn.addEventListener('click', async ()=>{ 
+  await supabase.auth.signOut(); 
+  user=null; 
+  updateUI(); 
+  profileModal.style.display='none';
+  showNotification('Sesión cerrada correctamente', 'info');
+});
+
+// -------------------- SCORE MODAL --------------------
+const scoreModal = document.getElementById('scoreModal');
+const scorePreview = document.getElementById('scorePreview');
+const scoreTitle = document.getElementById('scoreTitle');
+const scoreComposer = document.getElementById('scoreComposer');
+const scorePrice = document.getElementById('scorePrice');
+const scoreAudio = document.getElementById('scoreAudio');
+const scoreDescription = document.getElementById('scoreDescription');
+const scoreDuration = document.getElementById('scoreDuration');
+const scoreDifficulty = document.getElementById('scoreDifficulty');
+const scoreInstrument = document.getElementById('scoreInstrument');
+const scorePages = document.getElementById('scorePages');
+const scoreCommentsList = document.getElementById('scoreCommentsList');
+const scoreCommentInput = document.getElementById('scoreCommentInput');
+const scoreSendCommentBtn = document.getElementById('scoreSendCommentBtn');
+const pdfPreview = document.getElementById('pdfPreview');
+
+function openScoreModal(item){
+  currentScoreId = item.id;
+  scorePreview.src = item.cover_url || '';
+  scoreTitle.textContent = item.title;
+  scoreComposer.querySelector('span').textContent = item.composer || 'Desconocido';
+  scorePrice.textContent = `$${item.price || 0}`;
+  scoreAudio.src = item.audio_url || '';
+  
+  // Información adicional de la partitura
+  scoreDescription.textContent = item.description || 'Descripción no disponible.';
+  scoreDuration.textContent = item.duration || '--:--';
+  scoreDifficulty.textContent = item.difficulty || 'Media';
+  scoreInstrument.textContent = item.instrument || 'Piano';
+  scorePages.textContent = item.pages || '--';
+  
+  // Mostrar vista previa del PDF si está disponible
+  if (item.pdf_url) {
+    renderPdfPreview(item.pdf_url);
+  } else {
+    pdfPreview.classList.add('hidden');
+  }
+  
+  // Obtener duración del audio automáticamente si no está establecida
+  if (!item.duration && item.audio_url) {
+    getAudioDuration(item.audio_url).then(duration => {
+      if (duration && duration > 0) {
+        const minutes = Math.floor(duration / 60);
+        const seconds = Math.floor(duration % 60);
+        scoreDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Actualizar en la base de datos
+        supabase.from('scores').update({ duration: `${minutes}:${seconds.toString().padStart(2, '0')}` }).eq('id', item.id);
+      }
+    });
+  }
+  
+  scoreModal.style.display='flex';
+  loadScoreComments(item.id);
+}
+
+// Función para renderizar la vista previa del PDF
+async function renderPdfPreview(pdfUrl) {
+  pdfPreview.innerHTML = '<p class="text-gray-500">Cargando vista previa...</p>';
+  pdfPreview.classList.remove('hidden');
+  
+  try {
+    // Cargar el PDF
+    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    const pdf = await loadingTask.promise;
+    
+    // Limitar a las primeras 2 páginas
+    const numPages = Math.min(pdf.numPages, 2);
+    pdfPreview.innerHTML = '';
+    
+    // Renderizar cada página
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 0.5 });
+      
+      const pageDiv = document.createElement('div');
+      pageDiv.className = 'pdf-page';
+      pageDiv.dataset.page = i;
+      
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      
+      await page.render(renderContext).promise;
+      
+      const pageNumber = document.createElement('div');
+      pageNumber.className = 'pdf-page-number';
+      pageNumber.textContent = `Página ${i}`;
+      
+      pageDiv.appendChild(canvas);
+      pageDiv.appendChild(pageNumber);
+      pdfPreview.appendChild(pageDiv);
+      
+      // Agregar evento para abrir el visor de PDF
+      pageDiv.addEventListener('click', () => {
+        openPdfViewer(pdfUrl, i);
+      });
+    }
+  } catch (error) {
+    console.error('Error rendering PDF preview:', error);
+    pdfPreview.innerHTML = '<p class="text-red-500">No se pudo cargar la vista previa del PDF</p>';
+  }
+}
+
+// Función para abrir el visor de PDF
+async function openPdfViewer(pdfUrl, startPage = 1) {
+  const pdfViewerModal = document.getElementById('pdfViewerModal');
+  const pdfViewerContainer = document.getElementById('pdfViewerContainer');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
+  
+  pdfViewerContainer.innerHTML = '<div class="text-center py-10"><div class="loader"></div><p class="mt-3">Cargando PDF...</p></div>';
+  pdfViewerModal.style.display = 'flex';
+  
+  try {
+    // Cargar el PDF
+    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    currentPdf = await loadingTask.promise;
+    totalPages = currentPdf.numPages;
+    currentPage = startPage;
+    
+    // Limitar a las primeras 2 páginas
+    if (totalPages > 2) {
+      totalPages = 2;
+    }
+    
+    // Renderizar la página actual
+    await renderPdfPage(currentPage);
+    
+    // Configurar eventos de navegación
+    prevPageBtn.onclick = () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderPdfPage(currentPage);
+      }
+    };
+    
+    nextPageBtn.onclick = () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderPdfPage(currentPage);
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error loading PDF:', error);
+    pdfViewerContainer.innerHTML = '<p class="text-red-500 text-center py-10">Error al cargar el PDF</p>';
+  }
+}
+
+// Función para renderizar una página específica del PDF
+async function renderPdfPage(pageNum) {
+  const pdfViewerContainer = document.getElementById('pdfViewerContainer');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
+  
+  pdfViewerContainer.innerHTML = '<div class="text-center py-10"><div class="loader"></div><p class="mt-3">Cargando página...</p></div>';
+  
+  try {
+    const page = await currentPdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 1.5 });
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    
+    const renderContext = {
+      canvasContext: context,
+      viewport: viewport
+    };
+    
+    await page.render(renderContext).promise;
+    
+    pdfViewerContainer.innerHTML = '';
+    pdfViewerContainer.appendChild(canvas);
+    
+    // Actualizar información de página
+    pageInfo.textContent = `Página ${pageNum} de ${totalPages}`;
+    
+    // Habilitar/deshabilitar botones de navegación
+    prevPageBtn.disabled = pageNum <= 1;
+    nextPageBtn.disabled = pageNum >= totalPages;
+    
+  } catch (error) {
+    console.error('Error rendering PDF page:', error);
+    pdfViewerContainer.innerHTML = '<p class="text-red-500 text-center py-10">Error al cargar la página</p>';
+  }
+}
+
+// Cerrar el visor de PDF
+document.querySelector('.closePdfViewer').addEventListener('click', () => {
+  document.getElementById('pdfViewerModal').style.display = 'none';
+  currentPdf = null;
+});
+
+// Función para obtener la duración de un archivo de audio
+async function getAudioDuration(url) {
+  return new Promise((resolve) => {
+    const audio = new Audio();
+    audio.addEventListener('loadedmetadata', () => {
+      resolve(audio.duration);
+    });
+    audio.addEventListener('error', () => {
+      resolve(null);
+    });
+    audio.src = url;
+  });
+}
+
+scoreModal.querySelector('.closeScore').addEventListener('click', ()=>{ 
+  scoreModal.style.display='none'; 
+  scoreCommentsList.innerHTML=''; 
+  scoreCommentInput.value=''; 
+});
+
+scoreSendCommentBtn.addEventListener('click', async ()=>{
+  if(!user) return showNotification('Debes iniciar sesión para comentar', 'error');
+  if(!scoreCommentInput.value.trim()) return;
+  await supabase.from('score_comments').insert([{ score_id: currentScoreId, user_id: user.id, content: scoreCommentInput.value }]);
+  scoreCommentInput.value='';
+  loadScoreComments(currentScoreId);
+});
+
+// Añadir al carrito desde el modal
+document.getElementById('addToCartModalBtn').addEventListener('click', () => {
+  const currentItem = catalog.find(item => item.id === currentScoreId);
+  if (currentItem) {
+    addToCart(currentItem);
+    showNotification(`"${currentItem.title}" añadida al carrito`, 'success');
+  }
+});
+
+// -------------------- CARGAR COMENTARIOS DE PARTITURA --------------------
+async function loadScoreComments(scoreId){
+  const { data,error } = await supabase.from('score_comments').select('*, users(email)').eq('score_id', scoreId).order('created_at',{ascending:false});
+  if(error) return;
+  scoreCommentsList.innerHTML='';
+  
+  if (data.length === 0) {
+    scoreCommentsList.innerHTML = '<p class="text-gray-500 text-center py-4">No hay comentarios aún. ¡Sé el primero en comentar!</p>';
+    return;
+  }
+  
+  data.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='comment p-3 rounded-lg';
+    div.innerHTML=`
+      <div class="flex justify-between items-start mb-1">
+        <strong class="text-purple-700">${c.users.email}</strong>
+        <span class="text-xs text-gray-500">${new Date(c.created_at).toLocaleDateString()}</span>
+      </div>
+      <p class="text-gray-700">${c.content}</p>
+    `;
+    scoreCommentsList.appendChild(div);
+  });
+}
+
+// -------------------- COMENTARIOS GENERALES --------------------
+const generalCommentsList=document.getElementById('generalCommentsList');
+const generalCommentInput=document.getElementById('generalCommentInput');
+const sendGeneralCommentBtn=document.getElementById('sendGeneralCommentBtn');
+
+sendGeneralCommentBtn.addEventListener('click', async ()=>{
+  if(!user) return showNotification('Debes iniciar sesión', 'error');
+  if(!generalCommentInput.value.trim()) return;
+  await supabase.from('general_comments').insert([{ user_id: user.id, content: generalCommentInput.value }]);
+  generalCommentInput.value='';
+  loadGeneralComments();
+});
+
+async function loadGeneralComments(){
+  const { data,error } = await supabase.from('general_comments').select('*, users(email)').order('created_at',{ascending:false});
+  if(error) return;
+  generalCommentsList.innerHTML='';
+  
+  if (data.length === 0) {
+    generalCommentsList.innerHTML = '<p class="text-gray-500 text-center py-4">No hay comentarios aún. ¡Sé el primero en comentar!</p>';
+    return;
+  }
+  
+  data.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='comment p-3 rounded-lg';
+    div.innerHTML=`
+      <div class="flex justify-between items-start mb-1">
+        <strong class="text-purple-700">${c.users.email}</strong>
+        <span class="text-xs text-gray-500">${new Date(c.created_at).toLocaleDateString()}</span>
+      </div>
+      <p class="text-gray-700">${c.content}</p>
+    `;
+    generalCommentsList.appendChild(div);
+  });
+}
+
+// -------------------- EDICIÓN DE PARTITURAS --------------------
+function openEditScoreModal(item) {
+  const modal = document.getElementById('editScoreModal');
+  const form = document.getElementById('editScoreForm');
+  
+  // Llenar el formulario con los datos actuales
+  document.getElementById('editScoreId').value = item.id;
+  document.getElementById('editScoreTitle').value = item.title;
+  document.getElementById('editScoreComposer').value = item.composer || '';
+  document.getElementById('editScorePrice').value = item.price || 0;
+  document.getElementById('editScoreDescription').value = item.description || '';
+  document.getElementById('editScoreDifficulty').value = item.difficulty || 'Media';
+  document.getElementById('editScoreInstrument').value = item.instrument || '';
+  document.getElementById('editScorePages').value = item.pages || '';
+  document.getElementById('editScoreDuration').value = item.duration || '';
+  document.getElementById('editScoreCurrentCover').src = item.cover_url || 'https://via.placeholder.com/300x200?text=Partitura';
+  
+  // Mostrar el modal
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+// Cerrar modal de edición
+document.querySelector('.closeEditScoreModal').addEventListener('click', () => {
+  document.getElementById('editScoreModal').classList.add('hidden');
+  document.getElementById('editScoreModal').classList.remove('flex');
+});
+
+// Enviar formulario de edición
+document.getElementById('editScoreForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const scoreId = document.getElementById('editScoreId').value;
+  const coverFile = document.getElementById('editScoreCoverFile').files[0];
+  
+  try {
+    let coverUrl = null;
+    
+    // Subir nueva carátula si se proporcionó
+    if (coverFile) {
+      const timestamp = Date.now();
+      const coverFileName = `cover_${timestamp}_${coverFile.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('covers')
+        .upload(coverFileName, coverFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('covers')
+        .getPublicUrl(coverFileName);
+      
+      coverUrl = publicUrl;
+    }
+    
+    // Preparar datos para actualizar
+    const updateData = {
+      title: document.getElementById('editScoreTitle').value,
+      composer: document.getElementById('editScoreComposer').value,
+      price: parseFloat(document.getElementById('editScorePrice').value),
+      description: document.getElementById('editScoreDescription').value,
+      difficulty: document.getElementById('editScoreDifficulty').value,
+      instrument: document.getElementById('editScoreInstrument').value,
+      pages: document.getElementById('editScorePages').value ? parseInt(document.getElementById('editScorePages').value) : null,
+      duration: document.getElementById('editScoreDuration').value || null,
+    };
+    
+    // Añadir la URL de la carátula si se subió una nueva
+    if (coverUrl) {
+      updateData.cover_url = coverUrl;
+    }
+    
+    // Actualizar en la base de datos
+    const { error } = await supabase.from('scores')
+      .update(updateData)
+      .eq('id', scoreId);
+    
+    if (error) throw error;
+    
+    showNotification('Partitura actualizada correctamente', 'success');
+    document.getElementById('editScoreModal').classList.add('hidden');
+    document.getElementById('editScoreModal').classList.remove('flex');
+    
+    // Recargar el catálogo
+    loadCatalog();
+  } catch (error) {
+    console.error('Error updating score:', error);
+    showNotification('Error al actualizar la partitura: ' + error.message, 'error');
+  }
+});
+
+// -------------------- BOTONES Y UI --------------------
+ordersBtn.addEventListener('click', ()=>{ 
+  catalogEl.classList.add('hidden'); 
+  adminSection.classList.add('hidden'); 
+  ordersSection.classList.remove('hidden'); 
+  commentsSection.classList.add('hidden');
+  loadOrders(); 
+});
+
+adminBtn.addEventListener('click', ()=>{ 
+  catalogEl.classList.add('hidden'); 
+  ordersSection.classList.add('hidden'); 
+  adminSection.classList.remove('hidden'); 
+  commentsSection.classList.add('hidden');
+  loadAdmin(); 
+});
+
+// Abrir modal de administración
+document.getElementById('adminBtn').addEventListener('click', () => {
+  if (user && user.profile?.is_admin) {
+    document.getElementById('adminModal').style.display = 'flex';
+    loadAdminOrdersTable();
+    loadAdminUsersTable();
+  }
+});
+
+// Cerrar modal de administración
+document.querySelector('.closeAdminModal').addEventListener('click', () => {
+  document.getElementById('adminModal').style.display = 'none';
+});
+
+// Abrir modal para añadir partituras
+addScoreBtn.addEventListener('click', () => {
+  if (user && user.profile?.is_admin) {
+    document.getElementById('addScoreModal').style.display = 'flex';
+  } else {
+    showNotification('Solo los administradores pueden añadir partituras', 'error');
+  }
+});
+
+// Cerrar modal para añadir partituras
+document.querySelector('.closeAddScoreModal').addEventListener('click', () => {
+  document.getElementById('addScoreModal').style.display = 'none';
+});
+
+catalogBtn.addEventListener('click', ()=>{ 
+  catalogEl.classList.remove('hidden'); 
+  ordersSection.classList.add('hidden'); 
+  adminSection.classList.add('hidden'); 
+  commentsSection.classList.remove('hidden');
+});
+
+function updateUI(){
+  if(user){
+    loginBtn.classList.add('hidden'); 
+    signupBtn.classList.add('hidden'); 
+    profileBtn.classList.remove('hidden');
+    ordersBtn.classList.remove('hidden'); 
+    catalogBtn.classList.remove('hidden');
+    commentsSection.classList.remove('hidden');
+    
+    if(user.profile?.is_admin) {
+      adminBtn.classList.remove('hidden');
+      addScoreBtn.classList.remove('hidden');
+    } else {
+      adminBtn.classList.add('hidden');
+      addScoreBtn.classList.add('hidden');
+    }
+  } else {
+    loginBtn.classList.remove('hidden'); 
+    signupBtn.classList.remove('hidden'); 
+    profileBtn.classList.add('hidden');
+    ordersBtn.classList.add('hidden'); 
+    adminBtn.classList.add('hidden'); 
+    catalogBtn.classList.add('hidden');
+    addScoreBtn.classList.add('hidden');
+    commentsSection.classList.add('hidden');
+  }
+  renderCart(); 
+  renderCatalog(); 
+  catalogEl.classList.remove('hidden'); 
+  ordersSection.classList.add('hidden'); 
+  adminSection.classList.add('hidden');
+}
+
+// -------------------- SESION PERSISTENTE --------------------
+supabase.auth.getSession().then(async ({data})=>{
+  if(data.session){
+    user=data.session.user;
+    
+    // Verificar si el usuario ha confirmado su correo
+    if (!user.email_confirmed_at) {
+      showNotification('Debes confirmar tu correo electrónico antes de acceder', 'error');
+      await supabase.auth.signOut();
+      user = null;
+    } else {
+      const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).single();
+      if(profile) user.profile=profile;
+    }
+  }
+  updateUI();
+});
+
+// -------------------- BUSQUEDA --------------------
+searchInput.addEventListener('input', renderCatalog);
+
+// -------------------- INIT --------------------
+loadCatalog();
+loadGeneralComments();
+
+// -------------------- SUSCRIPCION EN TIEMPO REAL --------------------
+supabase.channel('purchases-channel').on('postgres_changes',{event:'*',schema:'public',table:'purchases'},payload=>{
+  if(user && payload.new?.user_id===user.id) loadOrders();
+  if(user && user.profile?.is_admin) {
+    loadAdmin();
+    loadAdminOrdersTable();
+  }
+}).subscribe();
+
+supabase.channel('score-comments-channel').on('postgres_changes',{event:'*',schema:'public',table:'score_comments'},payload=>{
+  if(currentScoreId===payload.new?.score_id) loadScoreComments(currentScoreId);
+}).subscribe();
+
+supabase.channel('general-comments-channel').on('postgres_changes',{event:'*',schema:'public',table:'general_comments'},payload=>{
+  loadGeneralComments();
+}).subscribe();
+
+</script>
+</body>
+</html>
