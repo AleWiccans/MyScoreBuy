@@ -556,6 +556,25 @@
   .notification.warning {
     background-color: #f59e0b;
   }
+  /* Selector de moneda */
+  .currency-selector {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 50px;
+    padding: 4px 8px;
+    border: 2px solid #e5e7eb;
+    margin-left: 10px;
+  }
+  .currency-selector select {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: #7c3aed;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -569,6 +588,18 @@
       <i class="fas fa-search"></i>
       <input type="text" id="search" placeholder="Buscar partituras..." class="p-2 rounded text-black w-full md:w-64">
     </div>
+    
+    <!-- Selector de moneda -->
+    <div class="currency-selector">
+      <select id="currencySelector">
+        <option value="CUP">CUP $</option>
+        <option value="USD">USD $</option>
+        <option value="EUR">EUR €</option>
+        <option value="GBP">GBP £</option>
+        <option value="MXN">MXN $</option>
+      </select>
+    </div>
+    
     <button id="loginBtn" class="btn-secondary ml-2"><i class="fas fa-sign-in-alt mr-1"></i>Iniciar Sesión</button>
     <button id="signupBtn" class="btn-secondary ml-2"><i class="fas fa-user-plus mr-1"></i>Registrarse</button>
     <button id="ordersBtn" class="btn-secondary ml-2 hidden"><i class="fas fa-history mr-1"></i>Pedidos</button>
@@ -796,7 +827,7 @@
       </div>
       
       <div class="form-group">
-        <label for="scorePriceInput">Precio ($) *</label>
+        <label for="scorePriceInput">Precio (CUP) *</label>
         <input type="number" id="scorePriceInput" min="0" step="0.01" required>
       </div>
       
@@ -833,7 +864,7 @@
       </div>
 
       <div class="form-group">
-        <label for="scoreMxlFile">Archivo MXL (para extraer instrumentos automáticamente)</label>
+        <label for="scoreMxlFile">Archivo MXL/XML (para extraer instrumentos automáticamente)</label>
         <input type="file" id="scoreMxlFile" accept=".mxl,.xml">
         <div class="progress-bar hidden" id="mxlProgressBar">
           <div class="progress-bar-fill" style="width: 0%"></div>
@@ -927,7 +958,7 @@
       </div>
       
       <div class="form-group">
-        <label for="editScorePrice">Precio ($) *</label>
+        <label for="editScorePrice">Precio (CUP) *</label>
         <input type="number" id="editScorePrice" min="0" step="0.01" required>
       </div>
       
@@ -990,6 +1021,8 @@ let currentView = 'grid'; // 'grid' or 'list'
 let currentPdf = null;
 let currentPage = 1;
 let totalPages = 1;
+let exchangeRates = {};
+let selectedCurrency = 'CUP';
 
 // Configuración de PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
@@ -1032,6 +1065,7 @@ const catalogBtn=document.getElementById('catalogBtn');
 const addScoreBtn=document.getElementById('addScoreBtn');
 const searchInput=document.getElementById('search');
 const viewToggleBtn=document.getElementById('viewToggleBtn');
+const currencySelector = document.getElementById('currencySelector');
 
 const cartBtn=document.getElementById('cartBtn');
 const cartContainer=document.getElementById('cartContainer');
@@ -1071,6 +1105,91 @@ function showNotification(message, type = 'info') {
     }, 300);
   }, 3000);
 }
+
+// -------------------- CONVERSIÓN DE MONEDAS --------------------
+async function loadExchangeRates() {
+  try {
+    // Usar una API gratuita de tasas de cambio (ejemplo con Frankfurter)
+    const response = await fetch('https://api.frankfurter.app/latest?from=CUP&to=USD,EUR,GBP,MXN');
+    
+    if (!response.ok) {
+      throw new Error('No se pudieron cargar las tasas de cambio');
+    }
+    
+    const data = await response.json();
+    
+    // Tasas de cambio fijas (en caso de que la API falle)
+    const fallbackRates = {
+      USD: 0.04,   // 1 CUP = 0.04 USD (aproximado)
+      EUR: 0.037,  // 1 CUP = 0.037 EUR
+      GBP: 0.032,  // 1 CUP = 0.032 GBP
+      MXN: 0.67    // 1 CUP = 0.67 MXN
+    };
+    
+    // Usar tasas de la API o las de respaldo
+    exchangeRates = {
+      CUP: 1,
+      USD: data.rates?.USD || fallbackRates.USD,
+      EUR: data.rates?.EUR || fallbackRates.EUR,
+      GBP: data.rates?.GBP || fallbackRates.GBP,
+      MXN: data.rates?.MXN || fallbackRates.MXN
+    };
+    
+    console.log('Tasas de cambio cargadas:', exchangeRates);
+  } catch (error) {
+    console.error('Error cargando tasas de cambio:', error);
+    
+    // Usar tasas de cambio fijas como respaldo
+    exchangeRates = {
+      CUP: 1,
+      USD: 0.04,
+      EUR: 0.037,
+      GBP: 0.032,
+      MXN: 0.67
+    };
+    
+    showNotification('Usando tasas de cambio aproximadas', 'info');
+  }
+}
+
+function convertPrice(priceInCUP, currency) {
+  if (currency === 'CUP') return priceInCUP;
+  if (!exchangeRates[currency]) return priceInCUP;
+  
+  const converted = priceInCUP * exchangeRates[currency];
+  return converted.toFixed(2);
+}
+
+function getCurrencySymbol(currency) {
+  const symbols = {
+    CUP: '$',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    MXN: '$'
+  };
+  return symbols[currency] || '$';
+}
+
+function formatPrice(price, currency) {
+  const symbol = getCurrencySymbol(currency);
+  return `${symbol}${price}`;
+}
+
+// Cambiar moneda seleccionada
+currencySelector.addEventListener('change', (e) => {
+  selectedCurrency = e.target.value;
+  renderCatalog();
+  renderCart();
+  
+  // Actualizar precios en el modal si está abierto
+  if (currentScoreId) {
+    const currentItem = catalog.find(item => item.id === currentScoreId);
+    if (currentItem) {
+      updateScoreModalPrices(currentItem);
+    }
+  }
+});
 
 // -------------------- CATALOGO --------------------
 async function loadCatalog(){
@@ -1120,13 +1239,17 @@ function renderCatalog(){
     const card=document.createElement('div');
     card.className='card bg-white rounded-lg shadow-md p-4 flex flex-col items-center fade-in';
     
+    // Convertir precio a la moneda seleccionada
+    const convertedPrice = convertPrice(item.price, selectedCurrency);
+    const formattedPrice = formatPrice(convertedPrice, selectedCurrency);
+    
     if (currentView === 'list') {
       card.innerHTML=`
         <img src="${item.cover_url||'https://via.placeholder.com/300x200?text=Partitura'}" alt="${item.title}" class="w-40 h-32 object-contain rounded mb-3">
         <div class="card-content">
           <h2 class="font-bold text-purple-800 mb-1">${item.title}</h2>
           <p class="text-sm text-gray-600 mb-1"><i class="fas fa-user mr-1"></i>${item.composer||'Desconocido'}</p>
-          <p class="text-lg font-bold mb-3 text-purple-700">$${item.price||0}</p>
+          <p class="text-lg font-bold mb-3 text-purple-700">${formattedPrice}</p>
           <div class="mt-auto">
             <audio controls src="${item.audio_url||''}" class="w-full mb-3"></audio>
             <button class="btn-primary">
@@ -1140,7 +1263,7 @@ function renderCatalog(){
         <img src="${item.cover_url||'https://via.placeholder.com/300x200?text=Partitura'}" alt="${item.title}" class="w-full h-48 object-contain rounded mb-3">
         <h2 class="font-bold text-purple-800 mb-1 text-center">${item.title}</h2>
         <p class="text-sm text-gray-600 mb-1 text-center"><i class="fas fa-user mr-1"></i>${item.composer||'Desconocido'}</p>
-        <p class="text-lg font-bold mb-3 text-purple-700">$${item.price||0}</p>
+        <p class="text-lg font-bold mb-3 text-purple-700">${formattedPrice}</p>
         <div class="mt-auto w-full">
           <audio controls src="${item.audio_url||''}" class="w-full mb-3"></audio>
           <button class="btn-primary w-full">
@@ -1202,18 +1325,25 @@ function addToCart(item){
 
 function renderCart(){
   cartList.innerHTML='';
-  let total=0;
+  let totalCUP = 0;
   let totalItems = 0;
   
   cart.forEach(i=>{
-    total += (i.price||0)*i.qty;
+    totalCUP += (i.price||0)*i.qty;
     totalItems += i.qty;
+    
+    // Convertir precio a la moneda seleccionada
+    const convertedPrice = convertPrice(i.price, selectedCurrency);
+    const convertedTotal = convertPrice(i.price * i.qty, selectedCurrency);
+    const formattedPrice = formatPrice(convertedPrice, selectedCurrency);
+    const formattedTotal = formatPrice(convertedTotal, selectedCurrency);
+    
     const li=document.createElement('li');
     li.className="flex justify-between items-center mb-3 p-2 bg-purple-50 rounded-lg";
     li.innerHTML=`
       <div class="flex-1">
         <p class="font-medium">${i.title}</p>
-        <p class="text-sm text-gray-600">$${i.price||0} x ${i.qty} = $${(i.price||0)*i.qty}</p>
+        <p class="text-sm text-gray-600">${formattedPrice} x ${i.qty} = ${formattedTotal}</p>
       </div>
       <div class="flex gap-2">
         <button class="bg-purple-200 text-purple-800 px-2 rounded-full"><i class="fas fa-minus"></i></button>
@@ -1232,8 +1362,12 @@ function renderCart(){
   });
   
   if(cart.length>0){
+    // Convertir total a la moneda seleccionada
+    const convertedTotal = convertPrice(totalCUP, selectedCurrency);
+    const formattedTotal = formatPrice(convertedTotal, selectedCurrency);
+    
     cartTotal.classList.remove('hidden'); 
-    cartTotal.textContent=`Total: $${total}`; 
+    cartTotal.textContent=`Total: ${formattedTotal}`; 
     paymentInfo.classList.remove('hidden'); 
     sendOrderBtn.classList.remove('hidden');
     clearCartBtn.classList.remove('hidden');
@@ -1263,8 +1397,13 @@ clearCartBtn.addEventListener('click', ()=>{
 sendOrderBtn.addEventListener('click', async ()=>{
   if(cart.length===0) return;
   
+  // Convertir total a CUP para la confirmación
+  const totalCUP = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const convertedTotal = convertPrice(totalCUP, selectedCurrency);
+  const formattedTotal = formatPrice(convertedTotal, selectedCurrency);
+  
   // Confirmar antes de enviar
-  if (!confirm(`¿Confirmar pedido por un total de $${cart.reduce((sum, item) => sum + (item.price * item.qty), 0)}?`)) {
+  if (!confirm(`¿Confirmar pedido por un total de ${formattedTotal}?`)) {
     return;
   }
   
@@ -1589,7 +1728,7 @@ async function loadAdminUsersTable() {
   }
 }
 
-// -------------------- EXTRACCIÓN DE INSTRUMENTOS DESDE ARCHIVOS MXL --------------------
+// -------------------- EXTRACCIÓN DE INSTRUMENTOS DESDE ARCHIVOS MXL/XML --------------------
 document.getElementById('scoreMxlFile').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (file) {
@@ -1605,27 +1744,40 @@ document.getElementById('extractInstrumentsBtn').addEventListener('click', async
   if (!file) return;
   
   try {
-    showNotification('Procesando archivo MXL...', 'info');
+    showNotification('Procesando archivo...', 'info');
     
-    // Leer el archivo MXL
-    const zip = new JSZip();
-    const contents = await zip.loadAsync(file);
+    let xmlText = '';
+    const fileName = file.name.toLowerCase();
     
-    // Buscar el archivo MusicXML (.xml) dentro del MXL
-    let xmlFile = null;
-    for (const filename in contents.files) {
-      if (filename.endsWith('.xml')) {
-        xmlFile = contents.files[filename];
-        break;
+    // Detectar si es MXL (ZIP) o XML plano
+    if (fileName.endsWith('.mxl')) {
+      // Procesar como MXL (archivo ZIP)
+      const zip = new JSZip();
+      const contents = await zip.loadAsync(file);
+      
+      // Buscar el archivo MusicXML (.xml) dentro del MXL
+      let xmlFile = null;
+      for (const filename in contents.files) {
+        if (filename.endsWith('.xml')) {
+          xmlFile = contents.files[filename];
+          break;
+        }
       }
+      
+      if (!xmlFile) {
+        throw new Error('No se encontró un archivo XML dentro del MXL');
+      }
+      
+      // Leer el contenido XML
+      xmlText = await xmlFile.async('text');
+    } else if (fileName.endsWith('.xml')) {
+      // Procesar como XML plano (texto)
+      xmlText = await readFileAsText(file);
+    } else {
+      throw new Error('Formato de archivo no válido. Use .mxl o .xml');
     }
     
-    if (!xmlFile) {
-      throw new Error('No se encontró un archivo XML dentro del MXL');
-    }
-    
-    // Leer el contenido XML
-    const xmlText = await xmlFile.async('text');
+    // Parsear el XML y extraer instrumentos
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
     
@@ -1660,10 +1812,20 @@ document.getElementById('extractInstrumentsBtn').addEventListener('click', async
       showNotification('No se encontraron instrumentos en el archivo', 'warning');
     }
   } catch (error) {
-    console.error('Error processing MXL file:', error);
-    showNotification('Error al procesar el archivo MXL: ' + error.message, 'error');
+    console.error('Error processing file:', error);
+    showNotification('Error al procesar el archivo: ' + error.message, 'error');
   }
 });
+
+// Función auxiliar para leer archivos como texto
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = e => reject(new Error('No se pudo leer el archivo'));
+    reader.readAsText(file);
+  });
+}
 
 // -------------------- SUBIDA AUTOMATIZADA DE PARTITURAS --------------------
 document.getElementById('addScoreForm').addEventListener('submit', async (e) => {
@@ -1872,7 +2034,10 @@ function openScoreModal(item){
   scorePreview.src = item.cover_url || '';
   scoreTitle.textContent = item.title;
   scoreComposer.querySelector('span').textContent = item.composer || 'Desconocido';
-  scorePrice.textContent = `$${item.price || 0}`;
+  
+  // Actualizar precios según la moneda seleccionada
+  updateScoreModalPrices(item);
+  
   scoreAudio.src = item.audio_url || '';
   
   // Información adicional de la partitura
@@ -1905,6 +2070,13 @@ function openScoreModal(item){
   
   scoreModal.style.display='flex';
   loadScoreComments(item.id);
+}
+
+// Función para actualizar precios en el modal según la moneda seleccionada
+function updateScoreModalPrices(item) {
+  const convertedPrice = convertPrice(item.price, selectedCurrency);
+  const formattedPrice = formatPrice(convertedPrice, selectedCurrency);
+  scorePrice.textContent = formattedPrice;
 }
 
 // Función para renderizar la vista previa del PDF
@@ -2355,6 +2527,7 @@ searchInput.addEventListener('input', renderCatalog);
 // -------------------- INIT --------------------
 loadCatalog();
 loadGeneralComments();
+loadExchangeRates(); // Cargar tasas de cambio al iniciar
 
 // -------------------- SUSCRIPCION EN TIEMPO REAL --------------------
 supabase.channel('purchases-channel').on('postgres_changes',{event:'*',schema:'public',table:'purchases'},payload=>{
