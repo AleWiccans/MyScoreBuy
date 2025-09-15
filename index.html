@@ -575,6 +575,76 @@
     color: #7c3aed;
     cursor: pointer;
   }
+  /* Etiqueta de género */
+  .genre-badge {
+    display: inline-block;
+    background-color: #8b5cf6;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-top: 5px;
+  }
+  /* Modal de edición de partitura */
+  #editScoreModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 95;
+  }
+  #editScoreModalContent {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    width: 95%;
+    max-width: 800px;
+    max-height: 90%;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  }
+  #editScoreModalContent button.closeEditScoreModal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  /* Previsualización de archivos */
+  .file-preview {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+  .file-preview img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    margin-right: 10px;
+    border-radius: 4px;
+  }
+  .file-preview audio {
+    width: 100%;
+    margin-top: 5px;
+  }
+  .file-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
 </style>
 </head>
 <body>
@@ -709,6 +779,11 @@
         <p id="scoreComposer" class="text-sm text-gray-600 mb-3"><i class="fas fa-user mr-1"></i>Compositor: <span class="font-medium"></span></p>
         <p id="scorePrice" class="text-xl font-bold mb-4 text-purple-700"></p>
         
+        <!-- Mostrar género en el modal -->
+        <div id="scoreGenre" class="mb-2">
+          <span class="genre-badge"><i class="fas fa-tag mr-1"></i><span id="scoreGenreText"></span></span>
+        </div>
+        
         <div id="scoreDescription" class="mb-4 text-gray-700"></div>
         
         <div id="scoreDetails" class="mb-4 p-4 bg-purple-50 rounded-lg">
@@ -831,6 +906,21 @@
         <input type="number" id="scorePriceInput" min="0" step="0.01" required>
       </div>
       
+      <!-- Campo de género añadido -->
+      <div class="form-group">
+        <label for="scoreGenreInput">Género *</label>
+        <select id="scoreGenreInput" required>
+          <option value="">Seleccionar género</option>
+          <option value="Clásica">Clásica</option>
+          <option value="Jazz">Jazz</option>
+          <option value="Pop">Pop</option>
+          <option value="Rock">Rock</option>
+          <option value="Folk">Folk</option>
+          <option value="Bandas Sonoras">Bandas Sonoras</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      
       <div class="form-group">
         <label for="scoreDescriptionInput">Descripción</label>
         <textarea id="scoreDescriptionInput" rows="3"></textarea>
@@ -879,6 +969,14 @@
       </div>
       
       <div class="form-group">
+        <label for="scoreCoverFile">Carátula (Imagen) *</label>
+        <input type="file" id="scoreCoverFile" accept="image/*" required>
+        <div class="progress-bar hidden" id="coverProgressBar">
+          <div class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+      </div>
+      
+            <div class="form-group">
         <label for="scoreCoverFile">Carátula (Imagen) *</label>
         <input type="file" id="scoreCoverFile" accept="image/*" required>
         <div class="progress-bar hidden" id="coverProgressBar">
@@ -937,9 +1035,9 @@
 </div>
 
 <!-- Modal de edición de partitura -->
-<div id="editScoreModal" class="flex hidden">
-  <div id="editScoreModalContent" class="fade-in bg-white rounded-lg p-6 w-11/12 max-w-2xl max-h-90vh overflow-y-auto">
-    <button class="closeEditScoreModal absolute top-4 right-4 text-2xl text-red-500">&times;</button>
+<div id="editScoreModal" class="flex">
+  <div id="editScoreModalContent" class="fade-in">
+    <button class="closeEditScoreModal">&times;</button>
     <h2 class="text-2xl font-bold mb-6 text-purple-800 flex items-center">
       <i class="fas fa-edit mr-2"></i>Editar Partitura
     </h2>
@@ -960,6 +1058,21 @@
       <div class="form-group">
         <label for="editScorePrice">Precio (CUP) *</label>
         <input type="number" id="editScorePrice" min="0" step="0.01" required>
+      </div>
+      
+      <!-- Campo de género añadido -->
+      <div class="form-group">
+        <label for="editScoreGenre">Género *</label>
+        <select id="editScoreGenre" required>
+          <option value="">Seleccionar género</option>
+          <option value="Clásica">Clásica</option>
+          <option value="Jazz">Jazz</option>
+          <option value="Pop">Pop</option>
+          <option value="Rock">Rock</option>
+          <option value="Folk">Folk</option>
+          <option value="Bandas Sonoras">Bandas Sonoras</option>
+          <option value="Otro">Otro</option>
+        </select>
       </div>
       
       <div class="form-group">
@@ -994,11 +1107,72 @@
         </div>
       </div>
       
+      <!-- Previsualización y gestión de archivos -->
       <div class="form-group">
         <label>Carátula actual</label>
-        <img id="editScoreCurrentCover" src="" class="w-32 h-24 object-contain border rounded">
-        <label for="editScoreCoverFile" class="block mt-2">Nueva carátula (opcional)</label>
-        <input type="file" id="editScoreCoverFile" accept="image/*">
+        <div class="file-preview">
+          <img id="editScoreCurrentCover" src="" alt="Carátula actual">
+          <div>
+            <p class="text-sm font-medium">Carátula</p>
+            <button type="button" class="btn-secondary mt-1" onclick="document.getElementById('editScoreCoverFile').click()">
+              <i class="fas fa-upload mr-1"></i>Cambiar
+            </button>
+          </div>
+        </div>
+        <input type="file" id="editScoreCoverFile" accept="image/*" class="hidden">
+      </div>
+      
+      <div class="form-group">
+        <label>Archivo PDF actual</label>
+        <div class="file-preview">
+          <i class="fas fa-file-pdf text-4xl text-red-500 mr-3"></i>
+          <div>
+            <p class="text-sm font-medium">Documento PDF</p>
+            <button type="button" class="btn-secondary mt-1" onclick="document.getElementById('editScorePdfFile').click()">
+              <i class="fas fa-upload mr-1"></i>Cambiar
+            </button>
+          </div>
+        </div>
+        <input type="file" id="editScorePdfFile" accept=".pdf" class="hidden">
+      </div>
+      
+      <div class="form-group">
+        <label>Archivo de audio actual</label>
+        <div id="editScoreAudioPreview" class="file-preview">
+          <i class="fas fa-file-audio text-4xl text-blue-500 mr-3"></i>
+          <div>
+            <p class="text-sm font-medium">Audio</p>
+            <div class="file-actions">
+              <button type="button" class="btn-secondary" onclick="document.getElementById('editScoreAudioFile').click()">
+                <i class="fas fa-upload mr-1"></i>Cambiar
+              </button>
+              <button type="button" class="btn-secondary" id="removeAudioBtn">
+                <i class="fas fa-trash mr-1"></i>Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+        <audio id="editScoreCurrentAudio" controls class="w-full mt-2 hidden"></audio>
+        <input type="file" id="editScoreAudioFile" accept="audio/*" class="hidden">
+      </div>
+      
+      <div class="form-group">
+        <label>Archivo MIDI actual</label>
+        <div id="editScoreMidiPreview" class="file-preview">
+          <i class="fas fa-music text-4xl text-purple-500 mr-3"></i>
+          <div>
+            <p class="text-sm font-medium">Archivo MIDI</p>
+            <div class="file-actions">
+              <button type="button" class="btn-secondary" onclick="document.getElementById('editScoreMidiFile').click()">
+                <i class="fas fa-upload mr-1"></i>Cambiar
+              </button>
+              <button type="button" class="btn-secondary" id="removeMidiBtn">
+                <i class="fas fa-trash mr-1"></i>Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+        <input type="file" id="editScoreMidiFile" accept=".mid,.midi" class="hidden">
       </div>
       
       <button type="submit" class="btn-primary w-full py-3 mt-4">
@@ -1249,6 +1423,7 @@ function renderCatalog(){
         <div class="card-content">
           <h2 class="font-bold text-purple-800 mb-1">${item.title}</h2>
           <p class="text-sm text-gray-600 mb-1"><i class="fas fa-user mr-1"></i>${item.composer||'Desconocido'}</p>
+          ${item.genre ? `<span class="genre-badge"><i class="fas fa-tag mr-1"></i>${item.genre}</span>` : ''}
           <p class="text-lg font-bold mb-3 text-purple-700">${formattedPrice}</p>
           <div class="mt-auto">
             <audio controls src="${item.audio_url||''}" class="w-full mb-3"></audio>
@@ -1263,12 +1438,13 @@ function renderCatalog(){
         <img src="${item.cover_url||'https://via.placeholder.com/300x200?text=Partitura'}" alt="${item.title}" class="w-full h-48 object-contain rounded mb-3">
         <h2 class="font-bold text-purple-800 mb-1 text-center">${item.title}</h2>
         <p class="text-sm text-gray-600 mb-1 text-center"><i class="fas fa-user mr-1"></i>${item.composer||'Desconocido'}</p>
+        ${item.genre ? `<div class="mb-2"><span class="genre-badge"><i class="fas fa-tag mr-1"></i>${item.genre}</span></div>` : ''}
         <p class="text-lg font-bold mb-3 text-purple-700">${formattedPrice}</p>
         <div class="mt-auto w-full">
           <audio controls src="${item.audio_url||''}" class="w-full mb-3"></audio>
           <button class="btn-primary w-full">
             <i class="fas fa-cart-plus mr-1"></i>Añadir al Carrito
-          </button>
+            </button>
         </div>
       `;
     }
@@ -1691,19 +1867,22 @@ async function loadAdminOrdersTable() {
   }
 }
 
-// -------------------- CARGAR TABLA DE USUARIOS --------------------
+// -------------------- CARGAR TABLA DE USUARIOS (CORREGIDA) --------------------
 async function loadAdminUsersTable() {
   const adminUsersTable = document.getElementById('adminUsersTable');
   adminUsersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4">Cargando...</td></tr>';
   
   try {
-    // Obtener usuarios
+    // Obtener usuarios - consulta corregida
     const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if(usersError) throw usersError;
+    if(usersError) {
+      console.error('Error de Supabase:', usersError);
+      throw usersError;
+    }
     
     if(!usersData || usersData.length===0){
       adminUsersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4">No hay usuarios registrados</td></tr>';
@@ -1715,7 +1894,7 @@ async function loadAdminUsersTable() {
     usersData.forEach(user => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${user.email}</td>
+        <td>${user.email || 'No disponible'}</td>
         <td>${user.phone || 'No proporcionado'}</td>
         <td>${new Date(user.created_at).toLocaleDateString()}</td>
         <td>${user.email_confirmed_at ? 'Sí' : 'No'}</td>
@@ -1724,11 +1903,11 @@ async function loadAdminUsersTable() {
     });
   } catch (error) {
     console.error('Error loading admin users table:', error);
-    adminUsersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error al cargar los usuarios</td></tr>';
+    adminUsersTable.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error al cargar los usuarios: ' + error.message + '</td></tr>';
   }
 }
 
-// -------------------- EXTRACCIÓN DE INSTRUMENTOS DESDE ARCHIVOS MXL/XML --------------------
+// -------------------- EXTRACCIÓN DE INSTRUMENTOS DESDE ARCHIVOS MXL/XML (CORREGIDA) --------------------
 document.getElementById('scoreMxlFile').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (file) {
@@ -1792,6 +1971,10 @@ document.getElementById('extractInstrumentsBtn').addEventListener('click', async
       }
     }
     
+    // DEBUG: Ver qué se está extrayendo
+    console.log('Instrumentos detectados:', instruments);
+    console.log('Elemento del campo instrumentos:', document.getElementById('scoreInstrumentInput'));
+    
     // Mostrar instrumentos extraídos
     if (instruments.length > 0) {
       const instrumentsList = document.getElementById('instrumentsList');
@@ -1805,7 +1988,10 @@ document.getElementById('extractInstrumentsBtn').addEventListener('click', async
       });
       
       document.getElementById('extractedInstruments').classList.remove('hidden');
+      
+      // Establecer el valor en el campo - DEBUG
       document.getElementById('scoreInstrumentInput').value = instruments.join(', ');
+      console.log('Valor establecido:', document.getElementById('scoreInstrumentInput').value);
       
       showNotification(`${instruments.length} instrumentos detectados`, 'success');
     } else {
@@ -1910,6 +2096,7 @@ document.getElementById('addScoreForm').addEventListener('submit', async (e) => 
       title: document.getElementById('scoreTitleInput').value,
       composer: document.getElementById('scoreComposerInput').value,
       price: parseFloat(document.getElementById('scorePriceInput').value),
+      genre: document.getElementById('scoreGenreInput').value,
       description: document.getElementById('scoreDescriptionInput').value,
       difficulty: document.getElementById('scoreDifficultyInput').value,
       instrument: document.getElementById('scoreInstrumentInput').value,
@@ -2028,6 +2215,7 @@ const scoreCommentsList = document.getElementById('scoreCommentsList');
 const scoreCommentInput = document.getElementById('scoreCommentInput');
 const scoreSendCommentBtn = document.getElementById('scoreSendCommentBtn');
 const pdfPreview = document.getElementById('pdfPreview');
+const scoreGenreText = document.getElementById('scoreGenreText');
 
 function openScoreModal(item){
   currentScoreId = item.id;
@@ -2046,6 +2234,9 @@ function openScoreModal(item){
   scoreDifficulty.textContent = item.difficulty || 'Media';
   scoreInstrument.textContent = item.instrument || 'Piano';
   scorePages.textContent = item.pages || '--';
+  
+  // Mostrar género
+  scoreGenreText.textContent = item.genre || 'No especificado';
   
   // Mostrar vista previa del PDF si está disponible
   if (item.pdf_url) {
@@ -2329,29 +2520,70 @@ async function loadGeneralComments(){
 // -------------------- EDICIÓN DE PARTITURAS --------------------
 function openEditScoreModal(item) {
   const modal = document.getElementById('editScoreModal');
-  const form = document.getElementById('editScoreForm');
   
   // Llenar el formulario con los datos actuales
   document.getElementById('editScoreId').value = item.id;
   document.getElementById('editScoreTitle').value = item.title;
   document.getElementById('editScoreComposer').value = item.composer || '';
   document.getElementById('editScorePrice').value = item.price || 0;
+  document.getElementById('editScoreGenre').value = item.genre || '';
   document.getElementById('editScoreDescription').value = item.description || '';
   document.getElementById('editScoreDifficulty').value = item.difficulty || 'Media';
   document.getElementById('editScoreInstrument').value = item.instrument || '';
   document.getElementById('editScorePages').value = item.pages || '';
   document.getElementById('editScoreDuration').value = item.duration || '';
+  
+  // Mostrar carátula actual
   document.getElementById('editScoreCurrentCover').src = item.cover_url || 'https://via.placeholder.com/300x200?text=Partitura';
   
+  // Configurar previsualización de audio si existe
+  const audioPreview = document.getElementById('editScoreAudioPreview');
+  const currentAudio = document.getElementById('editScoreCurrentAudio');
+  
+  if (item.audio_url) {
+    audioPreview.classList.remove('hidden');
+    currentAudio.src = item.audio_url;
+    currentAudio.classList.remove('hidden');
+  } else {
+    audioPreview.classList.add('hidden');
+    currentAudio.classList.add('hidden');
+  }
+  
+  // Configurar previsualización de MIDI si existe
+  const midiPreview = document.getElementById('editScoreMidiPreview');
+  if (item.midi_url) {
+    midiPreview.classList.remove('hidden');
+  } else {
+    midiPreview.classList.add('hidden');
+  }
+  
   // Mostrar el modal
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
+  modal.style.display = 'flex';
 }
 
 // Cerrar modal de edición
 document.querySelector('.closeEditScoreModal').addEventListener('click', () => {
-  document.getElementById('editScoreModal').classList.add('hidden');
-  document.getElementById('editScoreModal').classList.remove('flex');
+  document.getElementById('editScoreModal').style.display = 'none';
+});
+
+// Eliminar audio
+document.getElementById('removeAudioBtn').addEventListener('click', () => {
+  if (confirm('¿Estás seguro de que quieres eliminar el archivo de audio?')) {
+    document.getElementById('editScoreAudioPreview').classList.add('hidden');
+    document.getElementById('editScoreCurrentAudio').classList.add('hidden');
+    document.getElementById('editScoreCurrentAudio').src = '';
+    // Marcamos para eliminar el audio en la base de datos
+    document.getElementById('editScoreAudioFile').dataset.remove = 'true';
+  }
+});
+
+// Eliminar MIDI
+document.getElementById('removeMidiBtn').addEventListener('click', () => {
+  if (confirm('¿Estás seguro de que quieres eliminar el archivo MIDI?')) {
+    document.getElementById('editScoreMidiPreview').classList.add('hidden');
+    // Marcamos para eliminar el MIDI en la base de datos
+    document.getElementById('editScoreMidiFile').dataset.remove = 'true';
+  }
 });
 
 // Enviar formulario de edición
@@ -2360,9 +2592,17 @@ document.getElementById('editScoreForm').addEventListener('submit', async (e) =>
   
   const scoreId = document.getElementById('editScoreId').value;
   const coverFile = document.getElementById('editScoreCoverFile').files[0];
+  const pdfFile = document.getElementById('editScorePdfFile').files[0];
+  const audioFile = document.getElementById('editScoreAudioFile').files[0];
+  const midiFile = document.getElementById('editScoreMidiFile').files[0];
+  const removeAudio = document.getElementById('editScoreAudioFile').dataset.remove === 'true';
+  const removeMidi = document.getElementById('editScoreMidiFile').dataset.remove === 'true';
   
   try {
     let coverUrl = null;
+    let pdfUrl = null;
+    let audioUrl = null;
+    let midiUrl = null;
     
     // Subir nueva carátula si se proporcionó
     if (coverFile) {
@@ -2382,11 +2622,66 @@ document.getElementById('editScoreForm').addEventListener('submit', async (e) =>
       coverUrl = publicUrl;
     }
     
+    // Subir nuevo PDF si se proporcionó
+    if (pdfFile) {
+      const timestamp = Date.now();
+      const pdfFileName = `pdf_${timestamp}_${pdfFile.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('pdfs')
+        .upload(pdfFileName, pdfFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('pdfs')
+        .getPublicUrl(pdfFileName);
+      
+      pdfUrl = publicUrl;
+    }
+    
+    // Subir nuevo audio si se proporcionó
+    if (audioFile) {
+      const timestamp = Date.now();
+      const audioFileName = `audio_${timestamp}_${audioFile.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('audios')
+        .upload(audioFileName, audioFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('audios')
+        .getPublicUrl(audioFileName);
+      
+      audioUrl = publicUrl;
+    }
+    
+    // Subir nuevo MIDI si se proporcionó
+    if (midiFile) {
+      const timestamp = Date.now();
+      const midiFileName = `midi_${timestamp}_${midiFile.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('midis')
+        .upload(midiFileName, midiFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('midis')
+        .getPublicUrl(midiFileName);
+      
+      midiUrl = publicUrl;
+    }
+    
     // Preparar datos para actualizar
     const updateData = {
       title: document.getElementById('editScoreTitle').value,
       composer: document.getElementById('editScoreComposer').value,
       price: parseFloat(document.getElementById('editScorePrice').value),
+      genre: document.getElementById('editScoreGenre').value,
       description: document.getElementById('editScoreDescription').value,
       difficulty: document.getElementById('editScoreDifficulty').value,
       instrument: document.getElementById('editScoreInstrument').value,
@@ -2394,10 +2689,15 @@ document.getElementById('editScoreForm').addEventListener('submit', async (e) =>
       duration: document.getElementById('editScoreDuration').value || null,
     };
     
-    // Añadir la URL de la carátula si se subió una nueva
-    if (coverUrl) {
-      updateData.cover_url = coverUrl;
-    }
+    // Añadir las URLs de los archivos si se subieron nuevos
+    if (coverUrl) updateData.cover_url = coverUrl;
+    if (pdfUrl) updateData.pdf_url = pdfUrl;
+    if (audioUrl) updateData.audio_url = audioUrl;
+    if (midiUrl) updateData.midi_url = midiUrl;
+    
+    // Manejar eliminación de archivos
+    if (removeAudio) updateData.audio_url = null;
+    if (removeMidi) updateData.midi_url = null;
     
     // Actualizar en la base de datos
     const { error } = await supabase.from('scores')
@@ -2407,8 +2707,7 @@ document.getElementById('editScoreForm').addEventListener('submit', async (e) =>
     if (error) throw error;
     
     showNotification('Partitura actualizada correctamente', 'success');
-    document.getElementById('editScoreModal').classList.add('hidden');
-    document.getElementById('editScoreModal').classList.remove('flex');
+    document.getElementById('editScoreModal').style.display = 'none';
     
     // Recargar el catálogo
     loadCatalog();
