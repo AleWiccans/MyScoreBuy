@@ -1061,6 +1061,56 @@
   .suggestion-item:last-child {
     border-bottom: none;
   }
+
+/* ======= AJUSTES RESPONSIVOS Y NUEVAS FUNCIONALIDADES ======= */
+/* Forzar que el main tenga espacio bajo el header (se ajusta también vía JS) */
+main { transition: padding-top 0.18s ease; }
+
+/* Mobile: ocultar botones del header (se clonarán al sidebar) */
+@media (max-width: 768px) {
+  header .flex.items-center > :not(.search-container):not(.currency-selector) {
+    display: none !important;
+  }
+}
+
+/* Botón Hamburger visible en móvil */
+#hamburgerBtn { display: none; background: none; border: none; color: inherit; font-size: 1.25rem; margin-left: 8px; }
+@media (max-width: 768px) { #hamburgerBtn { display: inline-flex; align-items:center; justify-content:center; } }
+
+/* Sidebar móvil */
+#sidebarOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:110; transition: opacity 0.25s ease; }
+#sidebarOverlay.show { display:block; }
+#mobileSidebar { position:fixed; top:0; right:0; height:100vh; width:0; background: #ffffff; box-shadow: -10px 0 30px rgba(0,0,0,0.12); overflow:hidden; transition: width 0.28s ease; z-index:120; }
+#mobileSidebar.open { width: 280px; }
+#mobileSidebar .sidebar-inner { padding: 20px; font-family: inherit; }
+#mobileSidebar .sidebar-inner .btn-secondary { display:block; width:100%; text-align:left; margin-bottom:8px; }
+#mobileSidebar .sidebar-inner .user-info { margin-bottom:12px; font-weight:600; color:#4b5563; }
+
+/* Botón flotante Añadir (solo visible para admin; se mostrará por JS) */
+#floatingAddBtn { position: fixed; bottom: 20px; right: 96px; width: 56px; height: 56px; border-radius: 50%; background:#10b981; color:#fff; display:none; align-items:center; justify-content:center; z-index:130; box-shadow: 0 10px 28px rgba(16,185,129,0.18); cursor:pointer; }
+#floatingAddBtn.show { display:flex; }
+#floatingAddBtn i { font-size: 1.2rem; }
+
+/* Ajuste para que el carrito no tape elementos en pantallas muy pequeñas */
+@media (max-width: 420px) {
+  #cartBtn { right: 16px; bottom: 16px; width:52px; height:52px; }
+  #floatingAddBtn { right: 84px; bottom: 16px; width:52px; height:52px; }
+}
+
+/* Chips para etiquetas */
+.search-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.search-tag, .tag-chip { background:#eef2ff; color:#3c2b9e; padding:6px 10px; border-radius:999px; font-weight:600; display:inline-flex; align-items:center; gap:8px; }
+.search-tag .remove-tag, .tag-chip .remove-tag { cursor:pointer; padding-left:6px; font-weight:700; color:#9f7aea; }
+
+/* Mejor comportamiento de modales en móvil */
+#scoreContentModal, #addScoreModalContent, #editScoreModalContent, #adminModalContent, #pdfViewerContent, #profileContent {
+  box-sizing: border-box;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+/* Small polish */
+.header { z-index: 100; }
 </style>
 </head>
 <body>
@@ -1096,6 +1146,17 @@
     <button id="addScoreBtn" class="btn-secondary ml-2 hidden"><i class="fas fa-plus-circle mr-1"></i>Añadir Partitura</button>
   </div>
 </header>
+<!-- Mobile hamburger + sidebar (insertado automáticamente por el asistente) -->
+<button id="hamburgerBtn" aria-label="Abrir menú" class="md:hidden ml-2"><i class="fas fa-bars"></i></button>
+<div id="sidebarOverlay"></div>
+<div id="mobileSidebar" aria-hidden="true">
+  <div class="sidebar-inner">
+    <button class="close-sidebar" aria-label="Cerrar menú" style="font-size:1.5rem;background:none;border:none;display:block;margin-left:auto;">&times;</button>
+    <div class="user-info" id="mobileUserArea"></div>
+    <nav id="mobileMenuButtons" class="flex flex-col gap-2 mt-2"></nav>
+  </div>
+</div>
+
 
 <!-- ========== NUEVO MODAL DE AUTENTICACIÓN ========== -->
 <div id="authModal" class="flex">
@@ -4083,6 +4144,223 @@ supabase.channel('general-comments-channel').on('postgres_changes',{event:'*',sc
   loadGeneralComments();
 }).subscribe();
 
+</script>
+
+<script>
+// ======= Script de mejoras (header, sidebar móvil, tags, botón flotante) =======
+(function(){
+  function adjustMainPadding(){
+    const header = document.querySelector('.header');
+    const mains = document.querySelectorAll('main');
+    if(header){
+      const h = header.offsetHeight + 20;
+      mains.forEach(m => { m.style.paddingTop = h + 'px'; });
+      // ajustar max-heights de modales para que no desborden en móviles
+      const modals = document.querySelectorAll('#scoreContentModal, #addScoreModalContent, #editScoreModalContent, #adminModalContent, #pdfViewerContent, #profileContent');
+      modals.forEach(el=>{
+        if(el && el.style) el.style.maxHeight = 'calc(100vh - ' + (header.offsetHeight + 40) + 'px)';
+      });
+    }
+  }
+
+  // Ejecutar al cargar y al redimensionar
+  window.addEventListener('load', adjustMainPadding);
+  window.addEventListener('resize', function(){ setTimeout(adjustMainPadding, 80); });
+
+  // Sidebar móvil (abrir / cerrar)
+  const hamburger = document.getElementById('hamburgerBtn');
+  const overlay = document.getElementById('sidebarOverlay');
+  const sidebar = document.getElementById('mobileSidebar');
+  const closeSidebarBtns = [];
+  function openSidebar(){
+    if(sidebar){ sidebar.classList.add('open'); sidebar.setAttribute('aria-hidden','false'); }
+    if(overlay){ overlay.classList.add('show'); }
+  }
+  function closeSidebar(){
+    if(sidebar){ sidebar.classList.remove('open'); sidebar.setAttribute('aria-hidden','true'); }
+    if(overlay){ overlay.classList.remove('show'); }
+  }
+  if(hamburger){ hamburger.addEventListener('click', (e)=>{ e.stopPropagation(); openSidebar(); }); }
+  if(overlay){ overlay.addEventListener('click', closeSidebar); }
+  document.addEventListener('click', function(e){ if(!sidebar.contains(e.target) && !hamburger.contains(e.target)){ /*closeSidebar();*/ } });
+
+  // close buttons inside sidebar
+  document.querySelectorAll('#mobileSidebar .close-sidebar').forEach(b=> b.addEventListener('click', closeSidebar));
+
+  // Mover (clonar) botones importantes al sidebar para móviles (se hace cada vez que cambia el tamaño)
+  function populateMobileMenu(){
+    const menu = document.getElementById('mobileMenuButtons');
+    if(!menu) return;
+    menu.innerHTML = '';
+    const ids = ['loginBtn','signupBtn','ordersBtn','adminBtn','catalogBtn','profileBtn','addScoreBtn'];
+    ids.forEach(id => {
+      const orig = document.getElementById(id);
+      if(orig){
+        const clone = orig.cloneNode(true);
+        // remover clases que oculten en móvil y estilizar
+        clone.classList.remove('hidden');
+        clone.classList.remove('btn-secondary');
+        clone.style.display = 'block';
+        clone.style.width = '100%';
+        clone.addEventListener('click', function(e){
+          // trigger original click to preserve behavior if possible
+          try { orig.click(); } catch(err){}
+          closeSidebar();
+        });
+        menu.appendChild(clone);
+      }
+    });
+    // If user info available, show it in mobileUserArea
+    const userArea = document.getElementById('mobileUserArea');
+    if(userArea){
+      const profileEmail = document.getElementById('profileEmail');
+      if(profileEmail && profileEmail.textContent.trim() !== ''){
+        userArea.textContent = profileEmail.textContent;
+      } else {
+        userArea.textContent = '';
+      }
+    }
+  }
+  window.addEventListener('resize', populateMobileMenu);
+  window.addEventListener('load', populateMobileMenu);
+
+  // Floating Add Score button (clonado del addScoreBtn) - se mostrará solo si el botón en header no está oculto
+  (function createFloatingAdd(){
+    if(document.getElementById('floatingAddBtn')) return;
+    const btn = document.createElement('div');
+    btn.id = 'floatingAddBtn';
+    btn.title = 'Añadir Partitura (solo administradores)';
+    btn.innerHTML = '<i class="fas fa-plus"></i>';
+    document.body.appendChild(btn);
+    btn.addEventListener('click', ()=>{
+      const original = document.getElementById('addScoreBtn');
+      if(original) original.click();
+    });
+    // observar cada 400ms si el addScoreBtn está visible y mostrar/ocultar el flotante
+    setInterval(()=>{
+      const original = document.getElementById('addScoreBtn');
+      if(original && !original.classList.contains('hidden')){
+        btn.classList.add('show');
+      } else {
+        btn.classList.remove('show');
+      }
+    }, 500);
+  })();
+
+  // ===== Sistema de etiquetas (tags) más amigable para añadir/editar partituras =====
+  function setupTagInput(inputId, containerId){
+    const input = document.getElementById(inputId);
+    if(!input) return;
+    // Crear contenedor para chips si no existe
+    let container = document.getElementById(containerId);
+    if(!container){
+      container = document.createElement('div');
+      container.id = containerId;
+      container.className = 'search-tags';
+      input.parentNode.insertBefore(container, input.nextSibling);
+    }
+    let tags = [];
+
+    // Añadir función para actualizar inputs ocultos
+    function updateHiddenInputs(){
+      let form = input.form || document.querySelector('form');
+      if(!form) return;
+      // JSON
+      let jsonInput = form.querySelector('#' + inputId + 'Json');
+      if(!jsonInput){ jsonInput = document.createElement('input'); jsonInput.type='hidden'; jsonInput.id = inputId + 'Json'; jsonInput.name = inputId + 'Json'; form.appendChild(jsonInput); }
+      // Comma-separated
+      let commaInput = form.querySelector('#' + inputId + 'Comma');
+      if(!commaInput){ commaInput = document.createElement('input'); commaInput.type='hidden'; commaInput.id = inputId + 'Comma'; commaInput.name = inputId + 'Comma'; form.appendChild(commaInput); }
+      // Postgres array literal
+      let pgInput = form.querySelector('#' + inputId + 'PgArray');
+      if(!pgInput){ pgInput = document.createElement('input'); pgInput.type='hidden'; pgInput.id = inputId + 'PgArray'; pgInput.name = inputId + 'PgArray'; form.appendChild(pgInput); }
+
+      jsonInput.value = JSON.stringify(tags);
+      commaInput.value = tags.join(',');
+      pgInput.value = tags.length ? '{"' + tags.map(t=>t.replace(/"/g,'\\"')).join('","') + '"}' : '{}';
+
+      // Mantener también el valor visible (por compatibilidad)
+      input.value = tags.join(',');
+    }
+
+    function renderChips(){
+      container.innerHTML = '';
+      tags.forEach(t => {
+        const chip = document.createElement('span');
+        chip.className = 'search-tag tag-chip';
+        chip.textContent = t;
+        const rem = document.createElement('span');
+        rem.className = 'remove-tag';
+        rem.innerHTML = '&times;';
+        rem.title = 'Eliminar';
+        rem.addEventListener('click', function(e){
+          tags = tags.filter(x => x !== t);
+          renderChips();
+          updateHiddenInputs();
+        });
+        chip.appendChild(rem);
+        container.appendChild(chip);
+      });
+    }
+
+    function addTag(t){
+      if(!t) return;
+      t = t.trim();
+      if(!t) return;
+      if(tags.includes(t)) return;
+      tags.push(t);
+      renderChips();
+      updateHiddenInputs();
+    }
+
+    // Manejar Enter y coma en el campo visible
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        const raw = input.value.trim();
+        if(raw){
+          raw.split(',').map(s=>s.trim()).filter(Boolean).forEach(s=> addTag(s));
+          input.value = '';
+        }
+      } else if(e.key === ','){
+        e.preventDefault();
+        const raw = input.value.trim();
+        if(raw){
+          raw.split(',').map(s=>s.trim()).filter(Boolean).forEach(s=> addTag(s));
+          input.value = '';
+        }
+      }
+    });
+
+    // Si el campo tenía valor inicial, inicializar chips
+    if(input.value && input.value.trim()){
+      input.value.split(',').map(s=>s.trim()).filter(Boolean).forEach(s=> addTag(s));
+      input.value = '';
+    }
+
+    // Asegurar que antes de submit, los campos ocultos estén actualizados
+    const parentForm = input.form;
+    if(parentForm){
+      parentForm.addEventListener('submit', function(){ updateHiddenInputs(); });
+    }
+  }
+
+  // Inicializar para formularios de añadir y editar
+  document.addEventListener('DOMContentLoaded', function(){
+    setupTagInput('scoreTagsInput','scoreTagsContainer');
+    setupTagInput('editScoreTags','editScoreTagsContainer');
+  });
+
+  // Pequeño ajuste UX para modales: cerrar si se presiona Esc
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      document.querySelectorAll('#authModal, #profileModal, #scoreModal, #adminModal, #addScoreModal, #editScoreModal, #pdfViewerModal').forEach(m=>{
+        if(m && m.style && m.style.display === 'flex') m.style.display = 'none';
+      });
+      closeSidebar();
+    }
+  });
+})();
 </script>
 </body>
 </html>
